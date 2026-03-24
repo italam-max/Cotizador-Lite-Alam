@@ -1,0 +1,67 @@
+[
+  {
+    "name": "quotes",
+    "type": "base",
+    "schema": [
+      { "name": "folio",         "type": "text",   "required": true },
+      { "name": "status",        "type": "select", "required": true,
+        "options": { "values": ["Borrador","Enviada","En Negociación","Ganada","Perdida","Cancelada"] }
+      },
+      { "name": "client_name",   "type": "text",   "required": true },
+      { "name": "client_email",  "type": "email"  },
+      { "name": "client_phone",  "type": "text"   },
+      { "name": "project_date",  "type": "text"   },
+      { "name": "model",         "type": "select", "required": true,
+        "options": { "values": ["MR","MRL-L","MRL-G","HYD","Home Lift"] }
+      },
+      { "name": "use_type",      "type": "select",
+        "options": { "values": ["Pasajeros","Carga","Montaplatos"] }
+      },
+      { "name": "supplier",      "type": "select",
+        "options": { "values": ["Turco","Chino"] }
+      },
+      { "name": "quantity",      "type": "number", "required": true },
+      { "name": "capacity",      "type": "number", "required": true },
+      { "name": "persons",       "type": "number" },
+      { "name": "speed",         "type": "text",   "required": true },
+      { "name": "stops",         "type": "number", "required": true },
+      { "name": "travel",        "type": "number" },
+      { "name": "overhead",      "type": "number" },
+      { "name": "pit",           "type": "number" },
+      { "name": "shaft_width",   "type": "number" },
+      { "name": "shaft_depth",   "type": "number" },
+      { "name": "shaft_type",    "type": "text"   },
+      { "name": "control_group", "type": "text"   },
+      { "name": "door_type",     "type": "text"   },
+      { "name": "door_width",    "type": "number" },
+      { "name": "door_height",   "type": "number" },
+      { "name": "door_side",     "type": "select",
+        "options": { "values": ["Izquierda","Derecha","N/A"] }
+      },
+      { "name": "cabin_model",   "type": "text"   },
+      { "name": "cabin_finish",  "type": "text"   },
+      { "name": "cabin_floor",   "type": "text"   },
+      { "name": "cop_model",     "type": "text"   },
+      { "name": "norm",          "type": "text"   },
+      { "name": "traction",      "type": "text"   },
+      { "name": "price",         "type": "number" },
+      { "name": "currency",      "type": "select",
+        "options": { "values": ["MXN","USD"] }
+      },
+      { "name": "internal_notes","type": "text"   },
+      { "name": "commercial_terms", "type": "json" },
+      { "name": "owner_id",      "type": "text"   }
+    ]
+  },
+  {
+    "name": "quote_history",
+    "type": "base",
+    "schema": [
+      { "name": "quote_id",    "type": "text",   "required": true },
+      { "name": "user_name",   "type": "text"   },
+      { "name": "from_status", "type": "text"   },
+      { "name": "to_status",   "type": "text",   "required": true },
+      { "name": "note",        "type": "text"   }
+    ]
+  }
+]
