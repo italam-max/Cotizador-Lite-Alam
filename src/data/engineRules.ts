@@ -272,3 +272,134 @@ export const getAllowedSpeeds = (model: ModelId, capacity: number, stops: number
   const valid = SPEEDS.filter(s => { const v = parseFloat(s); return v >= minSpd && v <= maxSpd; });
   return valid.length > 0 ? valid : [String(maxSpd)];
 };
+
+// ─── CATÁLOGOS DE ACABADOS ────────────────────────────────────────
+
+// ── Acabado de paredes de cabina ─────────────────────────────
+// Imagen: /public/catalog/walls/[id].jpg (foto del panel de pared)
+// Archivos esperados: inox-mate.jpg, inox-espejo.jpg, titanio.jpg, epoxico-gris.jpg, etc.
+export const CABIN_WALLS = [
+  { id: 'INOX-MATE',    label: 'INOX Mate',          use: ['Pasajeros'],           img: '/catalog/walls/inox-mate.jpg'    },
+  { id: 'INOX-ESPEJO',  label: 'INOX Espejo',         use: ['Pasajeros'],           img: '/catalog/walls/inox-espejo.jpg'  },
+  { id: 'TITANIO',      label: 'Titanio Dorado',      use: ['Pasajeros'],           img: '/catalog/walls/titanio.jpg'      },
+  { id: 'EPOXICO-GRIS', label: 'Epóxico Gris',        use: ['Carga','Montaplatos'], img: '/catalog/walls/epoxico-gris.jpg' },
+  { id: 'EPOXICO-BLANCO',label:'Epóxico Blanco',      use: ['Carga','Montaplatos'], img: '/catalog/walls/epoxico-blanco.jpg'},
+];
+
+// ── Extras seleccionables de cabina ──────────────────────────
+export const CABIN_EXTRAS = [
+  { id: 'panoramico',      label: 'Panel panorámico',    use: ['Pasajeros']           },
+  { id: 'espejo-trasero',  label: 'Espejo trasero',       use: ['Pasajeros']           },
+  { id: 'espejo-lateral',  label: 'Espejo lateral',       use: ['Pasajeros']           },
+  { id: 'pasamanos-inox',  label: 'Pasamanos INOX',       use: ['Pasajeros','Carga']   },
+  { id: 'pasamanos-crom',  label: 'Pasamanos Cromado',    use: ['Pasajeros']           },
+  { id: 'led-premium',     label: 'Iluminación LED',      use: ['Pasajeros','Carga']   },
+] as const;
+
+export type CabinExtraId = typeof CABIN_EXTRAS[number]['id'];
+
+/** Genera la descripción de cabina a partir de los atributos seleccionados */
+export function buildCabinDescription(
+  walls:   string,
+  extras:  string[],
+  floor:   string,
+  plafon:  string,
+  useType: string
+): string {
+  const parts: string[] = [];
+  if (walls)  parts.push(`Cabina ${walls}`);
+  if (extras.includes('panoramico'))     parts.push('panel panorámico');
+  if (extras.includes('espejo-trasero')) parts.push('espejo trasero');
+  if (extras.includes('espejo-lateral')) parts.push('espejo lateral');
+  if (extras.includes('pasamanos-inox')) parts.push('pasamanos INOX');
+  if (extras.includes('pasamanos-crom')) parts.push('pasamanos cromado');
+  if (extras.includes('led-premium'))    parts.push('iluminación LED premium');
+  if (floor)  parts.push(`piso ${floor}`);
+  if (plafon) parts.push(`plafón ${plafon}`);
+  if (useType === 'Carga' || useType === 'Montaplatos') parts.push('uso industrial');
+  return parts.join(', ');
+}
+
+// ── Imagen: /public/catalog/finish/[id].jpg
+// Archivos esperados: inox.jpg, inox-mirror.jpg, titanium.jpg, epoxy-grey.jpg, epoxy-white.jpg, epoxy-beige.jpg
+export const CABIN_FINISHES = [
+  { id: 'INOX',        label: 'Inox / Acero Inoxidable Mate 304', use: ['Pasajeros'],           img: '/catalog/finish/inox.jpg'        },
+  { id: 'INOX-MIRROR', label: 'Inox / Acero Inoxidable Espejo',   use: ['Pasajeros'],           img: '/catalog/finish/inox-mirror.jpg' },
+  { id: 'TITANIUM',    label: 'Titanio dorado',                   use: ['Pasajeros'],           img: '/catalog/finish/titanium.jpg'    },
+  { id: 'EPOXY-GREY',  label: 'Epóxico Gris Industrial',          use: ['Carga','Montaplatos'], img: '/catalog/finish/epoxy-grey.jpg'  },
+  { id: 'EPOXY-WHITE', label: 'Epóxico Blanco Industrial',        use: ['Carga','Montaplatos'], img: '/catalog/finish/epoxy-white.jpg' },
+  { id: 'EPOXY-BEIGE', label: 'Epóxico Beige',                    use: ['Carga','Montaplatos'], img: '/catalog/finish/epoxy-beige.jpg' },
+];
+
+// ── Imagen: /public/catalog/floor/[id].jpg (80×80 px, muestra la textura)
+// Archivos esperados: star-galaxy.jpg, blanco-perla.jpg, tan-brown.jpg, etc.
+export const FLOOR_FINISHES = [
+  { id: 'STAR-GALAXY',    label: 'Star Galaxy',    use: ['Pasajeros'],           img: '/catalog/floor/star-galaxy.jpg'    },
+  { id: 'BLANCO-PERLA',   label: 'Blanco Perla',   use: ['Pasajeros'],           img: '/catalog/floor/blanco-perla.jpg'   },
+  { id: 'TAN-BROWN',      label: 'Tan Brown',      use: ['Pasajeros'],           img: '/catalog/floor/tan-brown.jpg'      },
+  { id: 'GIALLO-FIORITO', label: 'Giallo Fiorito', use: ['Pasajeros'],           img: '/catalog/floor/giallo-fiorito.jpg' },
+  { id: 'MELISA',         label: 'Melisa',         use: ['Pasajeros'],           img: '/catalog/floor/melisa.jpg'         },
+  { id: 'MULTICOLOR-RED', label: 'Multi-color Red',use: ['Pasajeros'],           img: '/catalog/floor/multicolor-red.jpg' },
+  { id: 'SOFITA-BEJ',     label: 'Sofita Bej',     use: ['Pasajeros'],           img: '/catalog/floor/sofita-bej.jpg'     },
+  { id: 'AFRICAN-LILAC',  label: 'African Lilac',  use: ['Pasajeros'],           img: '/catalog/floor/african-lilac.jpg'  },
+  { id: 'NERO-ZIMBABWE',  label: 'Nero Zimbabwe',  use: ['Pasajeros'],           img: '/catalog/floor/nero-zimbabwe.jpg'  },
+  { id: 'AFRICAN-RED',    label: 'African Red',    use: ['Pasajeros'],           img: '/catalog/floor/african-red.jpg'    },
+  { id: 'EPOXY-FLOOR',    label: 'Epóxico Industrial', use: ['Carga','Montaplatos'], img: '/catalog/floor/epoxy-floor.jpg'    },
+  { id: 'ALUMINUM',       label: 'Aluminio antiderrapante', use: ['Carga','Montaplatos'], img: '/catalog/floor/aluminum.jpg' },
+  { id: 'GRATING',        label: 'Rejilla metálica',use: ['Carga','Montaplatos'], img: '/catalog/floor/grating.jpg'       },
+];
+
+// ── Imagen: /public/catalog/plafon/[id].jpg (150×150 px, foto del plafón)
+// Archivos esperados: lv-10.jpg, lv-12.jpg, ..., lv-74.jpg
+export const PLAFONOS = [
+  { id: 'LV-10', label: 'LV-10', img: '/catalog/plafon/lv-10.jpg' },
+  { id: 'LV-12', label: 'LV-12', img: '/catalog/plafon/lv-12.jpg' },
+  { id: 'LV-20', label: 'LV-20', img: '/catalog/plafon/lv-20.jpg' },
+  { id: 'LV-22', label: 'LV-22', img: '/catalog/plafon/lv-22.jpg' },
+  { id: 'LV-26', label: 'LV-26', img: '/catalog/plafon/lv-26.jpg' },
+  { id: 'LV-27', label: 'LV-27', img: '/catalog/plafon/lv-27.jpg' },
+  { id: 'LV-29', label: 'LV-29 ✓', img: '/catalog/plafon/lv-29.jpg' },
+  { id: 'LV-34', label: 'LV-34', img: '/catalog/plafon/lv-34.jpg' },
+  { id: 'LV-37', label: 'LV-37', img: '/catalog/plafon/lv-37.jpg' },
+  { id: 'LV-51', label: 'LV-51', img: '/catalog/plafon/lv-51.jpg' },
+  { id: 'LV-52', label: 'LV-52', img: '/catalog/plafon/lv-52.jpg' },
+  { id: 'LV-54', label: 'LV-54', img: '/catalog/plafon/lv-54.jpg' },
+  { id: 'LV-62', label: 'LV-62', img: '/catalog/plafon/lv-62.jpg' },
+  { id: 'LV-64', label: 'LV-64', img: '/catalog/plafon/lv-64.jpg' },
+  { id: 'LV-68', label: 'LV-68', img: '/catalog/plafon/lv-68.jpg' },
+  { id: 'LV-74', label: 'LV-74', img: '/catalog/plafon/lv-74.jpg' },
+];
+
+/** Genera la nomenclatura automática de pisos según el número de paradas */
+export const generateFloorNomenclature = (stops: number): string => {
+  const floors: string[] = [];
+  for (let i = 0; i < stops; i++) {
+    if (i === 0) floors.push('PB');
+    else if (i === stops - 1 && stops > 2) floors.push('AZ');
+    else floors.push(String(i));
+  }
+  return floors.join(', ');
+};
+
+/** Rieles automáticos según modelo */
+export const autoRails = (model: string): { cabin: string; counterweight: string } => {
+  if (model === 'MRL-G' || model === 'MR') return { cabin: 'T90', counterweight: 'T70' };
+  if (model === 'MRL-L') return { cabin: 'T89', counterweight: 'T50' };
+  if (model === 'HYD' || model === 'Home Lift') return { cabin: 'T70', counterweight: 'N/A' };
+  return { cabin: 'T90', counterweight: 'T70' };
+};
+
+/** Sistema de tracción automático */
+export const autoTractionLabel = (model: string, speed: string): string => {
+  const spd = parseFloat(speed);
+  if (model === 'HYD' || model === 'Home Lift') return 'Impulsión Hidráulica';
+  if (spd <= 1.0) return 'Gearless 1:1';
+  if (spd <= 1.75) return 'Gearless 2:1';
+  return 'Gearless 2:1 Alta Velocidad';
+};
+
+/** Modelo de cabina sugerido por uso */
+export const suggestCabinModel = (useType: string): string => {
+  if (useType === 'Carga' || useType === 'Montaplatos') return 'ACC';
+  return 'CLX-102B';
+};
