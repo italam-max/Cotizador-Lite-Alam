@@ -16,18 +16,19 @@ const LGRAY = '#F5F5F5';
 const BLK   = '#1A1A1A';
 
 // ── IMAGEN POR MODELO — base64 para compatibilidad browser ──
-// Imagen de elevador por modelo — URL absoluta para react-pdf
-const elevatorImage = (model: string): string => {
-  const base = typeof window !== 'undefined' ? window.location.origin : '';
-  const map: Record<string, string> = {
-    'MRL-G':     `${base}/pdf/elevator-mrl-g.png`,
-    'MRL-L':     `${base}/pdf/elevator-mrl-l.png`,
-    'MR':        `${base}/pdf/elevator-mr.png`,
-    'HYD':       `${base}/pdf/elevator-hyd.png`,
-    'Home Lift': `${base}/pdf/elevator-hyd.png`,
-  };
-  return map[model] || `${base}/pdf/elevator-mr.png`;
+// Mapa de rutas de imágenes de elevadores
+const ELEVATOR_PATHS: Record<string, string> = {
+  'MRL-G':     '/pdf/elevator-mrl-g.png',
+  'MRL-L':     '/pdf/elevator-mrl-l.png',
+  'MR':        '/pdf/elevator-mr.png',
+  'HYD':       '/pdf/elevator-hyd.png',
+  'Home Lift': '/pdf/elevator-hyd.png',
 };
+const elevatorImage = (model: string): string =>
+  ELEVATOR_PATHS[model] || '/pdf/elevator-mr.png';
+
+// Mapa de rutas de imágenes de catálogo
+const CATALOG_BASE = '/catalog';
 
 const MODEL_LABELS: Record<string, string> = {
   'MR':        'Con Cuarto de Máquinas (MR)',
@@ -174,9 +175,17 @@ const SEGURIDADES = [
 ];
 
 // ── DOCUMENTO ────────────────────────────────────────────────
-interface Props { quote: Quote; seller?: string; sellerTitle?: string; cabinImage?: string }
+interface Props {
+  quote:        Quote;
+  seller?:      string;
+  sellerTitle?: string;
+  cabinImage?:  string;  // imagen generada por el configurador canvas
+  wallImg?:     string;  // imagen del acabado de paredes
+  floorImg?:    string;  // imagen del piso
+  plafonImg?:   string;  // imagen del plafón
+}
 
-export function QuotePDFDocument({ quote: q, seller = 'Ejecutivo de Ventas', sellerTitle = 'Ventas', cabinImage }: Props) {
+export function QuotePDFDocument({ quote: q, seller = 'Ejecutivo de Ventas', sellerTitle = 'Ventas', cabinImage, wallImg, floorImg, plafonImg }: Props) {
   const fmt   = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
   const today = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
   const isMRL = q.model.includes('MRL');

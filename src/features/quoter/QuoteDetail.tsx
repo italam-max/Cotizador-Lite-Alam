@@ -1,14 +1,17 @@
 // ARCHIVO: src/features/quoter/QuoteDetail.tsx
-// Diseño consistente con el dashboard — fondo beige, luxury-glass cards,
-// #0A2463 + #D4AF37, tipografía Syne
+// Vista de seguimiento rediseñada — datos destacados, historial rico,
+// botón "Enviar al CRM de Odoo" con configuración via variables de entorno
 
 import { useState, useEffect } from 'react';
 import {
   ArrowLeft, Edit3, ChevronDown, Loader2, CheckCircle2, Clock,
   Send, TrendingUp, Award, XCircle, Ban, MessageSquare, Download,
-  FileText, User, Settings2, DollarSign, Sparkles, Mail
+  FileText, Settings2, DollarSign, Sparkles, Mail, Zap,
+  Building2, Phone, CalendarDays, Package, Gauge, Layers,
+  Ruler, Users, ChevronRight, AlertCircle
 } from 'lucide-react';
 import { QuotesService } from '../../services/quotesService';
+import { sendEmail, buildQuoteEmailHTML } from '../../services/emailService';
 import type { Quote, QuoteHistory, QuoteStatus } from '../../types';
 import { autoRails, autoTractionLabel, generateFloorNomenclature } from '../../data/engineRules';
 
@@ -21,43 +24,52 @@ interface Props {
   onStatusChanged: () => void;
 }
 
-const STATUS_CFG: Record<QuoteStatus, { label: string; cls: string; icon: any; dot: string }> = {
-  'Borrador':       { label: 'Borrador',       cls: 'bg-slate-100 text-slate-600 border-slate-200',     icon: FileText,   dot: '#94a3b8' },
-  'Enviada':        { label: 'Enviada',         cls: 'bg-blue-50 text-blue-700 border-blue-200',          icon: Send,       dot: '#3b82f6' },
-  'En Negociación': { label: 'En Negociación',  cls: 'bg-amber-50 text-amber-700 border-amber-200',       icon: TrendingUp, dot: '#f59e0b' },
-  'Ganada':         { label: 'Ganada ✓',        cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: Award,      dot: '#10b981' },
-  'Perdida':        { label: 'Perdida',         cls: 'bg-red-50 text-red-600 border-red-200',             icon: XCircle,    dot: '#ef4444' },
-  'Cancelada':      { label: 'Cancelada',       cls: 'bg-gray-100 text-gray-500 border-gray-200',         icon: Ban,        dot: '#9ca3af' },
+const STATUS_CFG: Record<QuoteStatus, { label: string; cls: string; icon: any; dot: string; bg: string }> = {
+  'Borrador':       { label: 'Borrador',       cls: 'bg-slate-100 text-slate-600 border-slate-200',     icon: FileText,   dot: '#94a3b8', bg: '#f8fafc' },
+  'Enviada':        { label: 'Enviada',         cls: 'bg-blue-50 text-blue-700 border-blue-200',          icon: Send,       dot: '#3b82f6', bg: '#eff6ff' },
+  'En Negociación': { label: 'En Negociación',  cls: 'bg-amber-50 text-amber-700 border-amber-200',       icon: TrendingUp, dot: '#f59e0b', bg: '#fffbeb' },
+  'Ganada':         { label: 'Ganada ✓',        cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: Award,      dot: '#10b981', bg: '#f0fdf4' },
+  'Perdida':        { label: 'Perdida',         cls: 'bg-red-50 text-red-600 border-red-200',             icon: XCircle,    dot: '#ef4444', bg: '#fef2f2' },
+  'Cancelada':      { label: 'Cancelada',       cls: 'bg-gray-100 text-gray-500 border-gray-200',         icon: Ban,        dot: '#9ca3af', bg: '#f9fafb' },
 };
-
 const PIPELINE: QuoteStatus[] = ['Borrador','Enviada','En Negociación','Ganada','Perdida','Cancelada'];
-const fmt = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
 
-function InfoRow({ label, value }: { label: string; value?: any }) {
+const fmt    = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
+const fmtIVA = (v: number) => fmt.format(v * 1.16);
+
+// ── Stat card destacada ─────────────────────────────────────
+function StatCard({ icon: Icon, label, value, sub, color, bg }: {
+  icon: any; label: string; value: string; sub?: string; color: string; bg: string;
+}) {
+  return (
+    <div className="luxury-glass rounded-2xl p-4 border border-[#D4AF37]/10 shadow-sm flex items-start gap-3">
+      <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: bg }}>
+        <Icon size={18} style={{ color }} />
+      </div>
+      <div className="min-w-0">
+        <p className="text-[10px] font-bold text-[#0A2463]/40 uppercase tracking-wider">{label}</p>
+        <p className="font-black text-base text-[#0A2463] leading-tight mt-0.5 truncate"
+          style={{ fontFamily: "'Syne', sans-serif" }}>{value}</p>
+        {sub && <p className="text-[10px] text-[#0A2463]/40 mt-0.5">{sub}</p>}
+      </div>
+    </div>
+  );
+}
+
+// ── Fila de detalle ─────────────────────────────────────────
+function DetailRow({ label, value, highlight }: { label: string; value?: any; highlight?: boolean }) {
   if (!value && value !== 0) return null;
   return (
-    <div className="flex items-center justify-between py-1.5 border-b border-[#0A2463]/5 last:border-0">
-      <span className="text-[11px] font-medium text-[#0A2463]/50 uppercase tracking-wider">{label}</span>
-      <span className="text-xs font-semibold text-[#0A2463] text-right max-w-[60%] truncate">{String(value)}</span>
+    <div className="flex items-center justify-between py-2 border-b border-[#0A2463]/5 last:border-0">
+      <span className="text-xs font-medium text-[#0A2463]/45">{label}</span>
+      <span className={`text-xs font-semibold text-right max-w-[55%] truncate ${highlight ? 'text-[#D4AF37]' : 'text-[#0A2463]'}`}>
+        {String(value)}
+      </span>
     </div>
   );
 }
 
-function Card({ title, icon: Icon, children }: { title: string; icon?: any; children: React.ReactNode }) {
-  return (
-    <div className="luxury-glass rounded-2xl overflow-hidden border border-[#D4AF37]/10 shadow-sm mb-4">
-      <div className="px-4 py-3 border-b border-[#0A2463]/6 bg-white/50">
-        <p className="text-[10px] font-black text-[#0A2463] uppercase tracking-[0.15em] flex items-center gap-2">
-          {Icon && <Icon size={12} className="text-[#D4AF37]" />}
-          {title}
-        </p>
-      </div>
-      <div className="px-4 py-3">{children}</div>
-    </div>
-  );
-}
-
-// ── PDFButton ────────────────────────────────────────────────
+// ── Botón de descarga PDF ───────────────────────────────────
 function PDFButton({ quote, sellerName, sellerTitle }: { quote: Quote; sellerName: string; sellerTitle: string }) {
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState('');
@@ -68,19 +80,29 @@ function PDFButton({ quote, sellerName, sellerTitle }: { quote: Quote; sellerNam
       const { pdf }              = await import('@react-pdf/renderer');
       const { QuotePDFDocument } = await import('../pdf/QuotePDF');
       const React = await import('react');
-      const element = React.createElement(QuotePDFDocument as any, { quote, seller: sellerName, sellerTitle });
+      const { CABIN_WALLS, FLOOR_FINISHES, PLAFONOS } = await import('../../data/engineRules');
+      const wallItem   = CABIN_WALLS.find((w: any) => w.label === quote.cabin_finish);
+      const floorItem  = FLOOR_FINISHES.find((f: any) => f.label === quote.cabin_floor);
+      const plafonItem = PLAFONOS.find((p: any) => p.id === quote.cop_model);
+      const origin = window.location.origin;
+      const toAbs  = (path: string) => path ? `${origin}${path}` : '';
+      const element = React.createElement(QuotePDFDocument as any, {
+        quote, seller: sellerName, sellerTitle,
+        wallImg:   toAbs(wallItem?.img  || ''),
+        floorImg:  toAbs(floorItem?.img || ''),
+        plafonImg: toAbs(plafonItem?.img || ''),
+      });
       const contentBlob = await pdf(element as any).toBlob();
       const { mergeAndDownload } = await import('../../services/pdfMerge');
-      const filename = `${quote.folio}_${quote.client_name}.pdf`.replace(/\s+/g, '_');
-      await mergeAndDownload(contentBlob, quote.folio, quote.client_name, filename);
-    } catch (e: any) {
-      console.error(e); setError(e?.message || 'Error al generar PDF');
-    } finally { setLoading(false); }
+      await mergeAndDownload(contentBlob, quote.folio, quote.client_name,
+        `${quote.folio}_${quote.client_name}.pdf`.replace(/\s+/g, '_'));
+    } catch (e: any) { setError(e?.message || 'Error'); }
+    finally { setLoading(false); }
   };
 
   return (
     <button onClick={handleDownload} disabled={loading}
-      className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border transition-all"
+      className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border-2 transition-all"
       style={{ borderColor: '#0A2463', color: '#0A2463', background: 'white' }}>
       {loading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
       {loading ? 'Generando...' : error || 'Descargar PDF'}
@@ -88,7 +110,196 @@ function PDFButton({ quote, sellerName, sellerTitle }: { quote: Quote; sellerNam
   );
 }
 
-// ── MAIN ─────────────────────────────────────────────────────
+// ── Botón Enviar a Odoo CRM (usa credenciales del vendedor) ─
+function OdooButton({ quote }: { quote: Quote }) {
+  const [loading,  setLoading]  = useState(false);
+  const [status,   setStatus]   = useState<'idle' | 'ok' | 'error' | 'noconfig'>('idle');
+  const [msg,      setMsg]      = useState('');
+  const [showConfig, setShowConfig] = useState(false);
+
+  const sendToOdoo = async () => {
+    setLoading(true); setStatus('idle'); setMsg('');
+    try {
+      const { supabase }           = await import('../../services/supabase');
+      const { getOdooCredentials, sendQuoteToOdoo } = await import('../../services/odooService');
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Sin sesión activa');
+
+      const config = await getOdooCredentials(user.id);
+      if (!config) {
+        setStatus('noconfig');
+        setMsg('Configura tu conexión a Odoo primero');
+        setLoading(false);
+        return;
+      }
+
+      const { leadId } = await sendQuoteToOdoo(config, quote);
+      setStatus('ok');
+      setMsg(`✓ Oportunidad ${leadId} creada en Odoo CRM`);
+    } catch (e: any) {
+      setStatus('error');
+      setMsg(e.message || 'Error de conexión con Odoo');
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="flex flex-col gap-1">
+      {showConfig && (
+        <OdooConnectLazy onClose={() => setShowConfig(false)} />
+      )}
+      <div className="flex items-center gap-1.5">
+        <button onClick={sendToOdoo} disabled={loading || status === 'ok'}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wide transition-all active:scale-95 disabled:opacity-50"
+          style={{
+            background: status === 'ok' ? '#10b981' : '#7C3AED',
+            color: 'white',
+            fontFamily: "'Syne', sans-serif",
+            boxShadow: status === 'ok' ? 'none' : '0 4px 14px rgba(124,58,237,0.3)',
+          }}>
+          {loading
+            ? <><Loader2 size={13} className="animate-spin" /> Enviando...</>
+            : status === 'ok'
+            ? <><CheckCircle2 size={13} /> Enviado a Odoo</>
+            : <><Zap size={13} /> Enviar al CRM</>}
+        </button>
+        <button onClick={() => setShowConfig(true)} title="Configurar Odoo"
+          className="p-2 rounded-xl border border-[#7C3AED]/30 text-[#7C3AED] hover:bg-[#7C3AED]/10 transition-all"
+          style={{ fontSize: 14 }}>
+          ⚙
+        </button>
+      </div>
+      {msg && (
+        <p className={`text-[10px] font-medium ${status === 'ok' ? 'text-emerald-600' : status === 'noconfig' ? 'text-amber-600' : 'text-red-500'}`}>
+          {msg}
+          {status === 'noconfig' && (
+            <button onClick={() => setShowConfig(true)} className="ml-1 underline font-bold">Configurar</button>
+          )}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// Lazy import del modal para no cargar hasta que se necesite
+function OdooConnectLazy({ onClose }: { onClose: () => void }) {
+  const [Comp, setComp] = useState<React.ComponentType<{ onClose: () => void }> | null>(null);
+  useEffect(() => {
+    import('../../components/ui/OdooConnect').then(m => setComp(() => m.default));
+  }, []);
+  if (!Comp) return null;
+  return <Comp onClose={onClose} />;
+}
+
+
+// ── Botón de envío de correo con Zoho ─────────────────────
+function SendEmailButton({ quote, sellerName, sellerTitle }: { quote: Quote; sellerName: string; sellerTitle: string }) {
+  const [loading,     setLoading]     = useState(false);
+  const [status,      setStatus]      = useState<'idle' | 'ok' | 'error'>('idle');
+  const [msg,         setMsg]         = useState('');
+  const [showZoho,    setShowZoho]    = useState(false);
+  const [sendWithPDF, setSendWithPDF] = useState(false);
+
+  const handleSend = async () => {
+    if (!quote.client_email) return;
+    setLoading(true); setStatus('idle'); setMsg('');
+    try {
+      const fmt   = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
+      const total = (quote.price || 0) * (quote.quantity || 1);
+
+      const subject = `Propuesta ${quote.folio} — Elevadores Alamex`;
+      const bodyHtml = buildQuoteEmailHTML({
+        clientName:  quote.client_name,
+        folio:       quote.folio,
+        model:       `${quote.model} / ${quote.use_type}`,
+        total:       fmt.format(total),
+        sellerName,
+        sellerTitle,
+      });
+
+      // Opcional: adjuntar el PDF
+      let attachmentBase64: string | undefined;
+      if (sendWithPDF) {
+        const { pdf }              = await import('@react-pdf/renderer');
+        const { QuotePDFDocument } = await import('../pdf/QuotePDF');
+        const React = await import('react');
+        const element = React.createElement(QuotePDFDocument as any, { quote, seller: sellerName, sellerTitle });
+        const blob    = await pdf(element as any).toBlob();
+        const reader  = new FileReader();
+        attachmentBase64 = await new Promise(resolve => {
+          reader.onload = () => resolve((reader.result as string).split(',')[1]);
+          reader.readAsDataURL(blob);
+        });
+      }
+
+      await sendEmail({
+        to:               quote.client_email,
+        subject,
+        bodyHtml,
+        attachmentBase64,
+        attachmentName:   sendWithPDF ? `${quote.folio}_${quote.client_name}.pdf`.replace(/\s+/g,'_') : undefined,
+      });
+
+      setStatus('ok');
+      setMsg(`✓ Correo enviado a ${quote.client_email}`);
+    } catch (e: any) {
+      if (e.message?.includes('Zoho') || e.message?.includes('zoho') || e.message?.includes('conectada')) {
+        setShowZoho(true);
+      }
+      setStatus('error');
+      setMsg(e.message || 'Error al enviar');
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <>
+      {showZoho && (
+        <ZohoConnectLazy onClose={() => { setShowZoho(false); setStatus('idle'); setMsg(''); }} />
+      )}
+      <div className="luxury-glass rounded-2xl p-4 border border-[#D4AF37]/10 hover:border-[#D4AF37]/30 transition-all">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+            <Mail size={16} className="text-blue-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-bold text-[#0A2463]">Enviar propuesta</p>
+            <p className="text-[10px] text-[#0A2463]/40 truncate">{quote.client_email}</p>
+          </div>
+          <button onClick={() => setShowZoho(true)} title="Configurar Zoho"
+            className="text-[#0A2463]/30 hover:text-[#0A2463] transition-colors text-sm">⚙</button>
+        </div>
+        <label className="flex items-center gap-2 mb-2 cursor-pointer">
+          <input type="checkbox" checked={sendWithPDF} onChange={e => setSendWithPDF(e.target.checked)}
+            className="w-3.5 h-3.5 accent-[#0A2463]" />
+          <span className="text-[10px] text-[#0A2463]/50">Adjuntar PDF de la propuesta</span>
+        </label>
+        <button onClick={handleSend} disabled={loading || status === 'ok'}
+          className="w-full py-2 rounded-xl text-xs font-black uppercase tracking-wide transition-all disabled:opacity-50"
+          style={{ background: status === 'ok' ? '#10b981' : '#0A2463', color: 'white', fontFamily: "'Syne', sans-serif" }}>
+          {loading ? 'Enviando...' : status === 'ok' ? '✓ Enviado' : 'Enviar correo'}
+        </button>
+        {msg && (
+          <p className={`text-[10px] mt-1.5 text-center font-medium ${status === 'ok' ? 'text-emerald-600' : 'text-red-500'}`}>
+            {msg}
+          </p>
+        )}
+      </div>
+    </>
+  );
+}
+
+function ZohoConnectLazy({ onClose }: { onClose: () => void }) {
+  const [Comp, setComp] = useState<React.ComponentType<{ onClose: () => void }> | null>(null);
+  useEffect(() => {
+    import('../../components/ui/ZohoConnect').then(m => setComp(() => m.default));
+  }, []);
+  if (!Comp) return null;
+  return <Comp onClose={onClose} />;
+}
+
+// ══════════════════════════════════════════════════════════════
+// COMPONENTE PRINCIPAL
+// ══════════════════════════════════════════════════════════════
 export default function QuoteDetail({ quote, sellerName, sellerTitle, onBack, onEdit, onStatusChanged }: Props) {
   const [current,  setCurrent]  = useState<Quote>(quote);
   const [history,  setHistory]  = useState<QuoteHistory[]>([]);
@@ -119,12 +330,24 @@ export default function QuoteDetail({ quote, sellerName, sellerTitle, onBack, on
     finally { setChanging(false); setPending(null); setNote(''); }
   };
 
+  // Extras de cabina
+  const extras: string[] = (() => { try { return JSON.parse(current.cabin_model || '[]'); } catch { return []; } })();
+  const isExtrasJSON = Array.isArray(extras) && extras.length > 0 && typeof extras[0] === 'string' && extras[0].includes('-');
+  const extraLabels = isExtrasJSON ? extras.map((e: string) =>
+    e === 'panoramico' ? 'Panel panorámico' :
+    e === 'espejo-trasero' ? 'Espejo trasero' :
+    e === 'espejo-lateral' ? 'Espejo lateral' :
+    e === 'pasamanos-inox' ? 'Pasamanos INOX' :
+    e === 'pasamanos-crom' ? 'Pasamanos cromado' :
+    e === 'led-premium'    ? 'Iluminación LED' : e
+  ) : [];
+
   return (
     <div className="h-full flex flex-col overflow-hidden relative">
       <div className="absolute inset-0 arabesque-pattern opacity-30 pointer-events-none z-0" />
       <div className="ambient-light-bg opacity-40" />
 
-      {/* Header */}
+      {/* ── HEADER ── */}
       <div className="relative z-10 px-6 py-4 shrink-0 flex items-center justify-between bg-white/60 backdrop-blur-md border-b border-[#D4AF37]/20 shadow-sm">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="p-2 rounded-xl text-[#0A2463]/50 hover:text-[#0A2463] hover:bg-[#0A2463]/5 transition-all">
@@ -139,10 +362,11 @@ export default function QuoteDetail({ quote, sellerName, sellerTitle, onBack, on
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <OdooButton quote={current} />
           <PDFButton quote={current} sellerName={sellerName} sellerTitle={sellerTitle} />
           <button onClick={onEdit}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border transition-all"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border-2 transition-all"
             style={{ borderColor: '#0A2463', color: '#0A2463', background: 'white' }}>
             <Edit3 size={13} /> Editar
           </button>
@@ -156,13 +380,13 @@ export default function QuoteDetail({ quote, sellerName, sellerTitle, onBack, on
               <ChevronDown size={12} style={{ transform: menuOpen ? 'rotate(180deg)' : '', transition: 'transform 0.2s' }} />
             </button>
             {menuOpen && (
-              <div className="absolute right-0 top-full mt-2 rounded-2xl p-2 z-50 min-w-[200px] animate-fade-in"
-                style={{ background: 'white', border: '1px solid rgba(0,0,0,0.1)', boxShadow: '0 20px 60px rgba(0,0,0,0.12)' }}>
+              <div className="absolute right-0 top-full mt-2 rounded-2xl p-2 z-50 min-w-[200px]"
+                style={{ background: 'white', border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 20px 60px rgba(0,0,0,0.12)' }}>
                 {PIPELINE.map(s => {
                   const sc = STATUS_CFG[s];
                   return (
                     <button key={s}
-                      onClick={() => { if (s !== current.status) { setPending(s); } setMenuOpen(false); }}
+                      onClick={() => { if (s !== current.status) setPending(s); setMenuOpen(false); }}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold mb-1 transition-all ${s === current.status ? sc.cls : 'hover:bg-[#0A2463]/5 text-[#0A2463]/60'}`}>
                       <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: sc.dot }} />
                       {sc.label}
@@ -178,30 +402,29 @@ export default function QuoteDetail({ quote, sellerName, sellerTitle, onBack, on
       {/* Modal cambio de estado */}
       {pending && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
-          <div className="luxury-glass rounded-3xl p-7 max-w-md w-full mx-4 border border-[#D4AF37]/20 shadow-2xl animate-fade-in">
-            <h3 className="font-black text-lg text-[#0A2463] mb-1" style={{ fontFamily: "'Syne', sans-serif" }}>
+          <div className="luxury-glass rounded-3xl p-7 max-w-md w-full mx-4 border border-[#D4AF37]/20 shadow-2xl">
+            <h3 className="font-black text-lg text-[#0A2463] mb-4" style={{ fontFamily: "'Syne', sans-serif" }}>
               Cambiar estado
             </h3>
             <div className="flex items-center gap-2 mb-5">
               <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border ${STATUS_CFG[current.status]?.cls}`}>
                 {STATUS_CFG[current.status]?.label}
               </span>
-              <span className="text-[#0A2463]/40 text-xs">→</span>
+              <ChevronRight size={14} className="text-[#0A2463]/30" />
               <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border ${STATUS_CFG[pending]?.cls}`}>
                 {STATUS_CFG[pending]?.label}
               </span>
             </div>
             <textarea rows={3} value={note} onChange={e => setNote(e.target.value)}
               placeholder="Nota opcional (acuerdos, motivos, próximo paso...)"
-              className="w-full px-4 py-3 rounded-xl text-sm border border-[#0A2463]/15 outline-none bg-white resize-none mb-4
-                focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/15 text-[#0A2463]" />
+              className="w-full px-4 py-3 rounded-xl text-sm border border-[#0A2463]/15 outline-none bg-white resize-none mb-4 focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/15 text-[#0A2463]" />
             <div className="flex gap-3">
               <button onClick={() => { setPending(null); setNote(''); }}
                 className="flex-1 py-2.5 rounded-xl text-sm font-bold border border-[#0A2463]/20 text-[#0A2463]/60 hover:bg-[#0A2463]/5 transition-all">
                 Cancelar
               </button>
               <button onClick={confirmChange} disabled={changing}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-black text-white transition-all active:scale-95 disabled:opacity-40"
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-black text-white transition-all disabled:opacity-40"
                 style={{ background: '#0A2463', fontFamily: "'Syne', sans-serif" }}>
                 {changing ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
                 Confirmar
@@ -211,73 +434,146 @@ export default function QuoteDetail({ quote, sellerName, sellerTitle, onBack, on
         </div>
       )}
 
-      {/* Body */}
+      {/* ── BODY ── */}
       <div className="flex-1 overflow-hidden flex relative z-10">
 
-        {/* Sidebar izquierdo */}
-        <div className="w-[300px] shrink-0 border-r border-[#0A2463]/8 overflow-y-auto p-4"
+        {/* ── LEFT PANEL ── */}
+        <div className="w-[340px] shrink-0 border-r border-[#0A2463]/8 overflow-y-auto p-4 space-y-4"
           style={{ background: 'rgba(255,255,255,0.5)' }}>
 
-          {/* Precio destacado si tiene */}
-          {current.price > 0 && (
-            <div className="rounded-2xl p-4 mb-4"
-              style={{ background: '#0A2463' }}>
-              <p className="text-[9px] font-bold uppercase tracking-widest text-[#D4AF37] mb-1">
-                Inversión total
-              </p>
-              <p className="font-black text-2xl text-[#D4AF37]" style={{ fontFamily: "'Syne', sans-serif" }}>
+          {/* Precio destacado */}
+          {total > 0 && (
+            <div className="rounded-2xl p-5 text-white"
+              style={{ background: 'linear-gradient(135deg, #0A2463 0%, #1B3A6B 100%)' }}>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-[#D4AF37] mb-1">Inversión total</p>
+              <p className="font-black text-3xl text-[#D4AF37]" style={{ fontFamily: "'Syne', sans-serif" }}>
                 {fmt.format(total)}
               </p>
-              <p className="text-[10px] text-white/40 mt-1">
-                Con IVA: {fmt.format(total * 1.16)}
-              </p>
+              <p className="text-[10px] text-white/40 mt-1">Con IVA (16%): {fmtIVA(total)}</p>
+              <div className="mt-3 pt-3 border-t border-white/10 grid grid-cols-2 gap-2">
+                <div>
+                  <p className="text-[9px] text-white/40">Cantidad</p>
+                  <p className="text-sm font-bold text-white">{current.quantity} equipo{current.quantity > 1 ? 's' : ''}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] text-white/40">Precio unit.</p>
+                  <p className="text-sm font-bold text-white">{fmt.format(current.price || 0)}</p>
+                </div>
+              </div>
             </div>
           )}
 
-          <Card title="Cliente" icon={User}>
-            <InfoRow label="Nombre" value={current.client_name} />
-            <InfoRow label="Email"  value={current.client_email} />
-            <InfoRow label="Tel."   value={current.client_phone} />
-            <InfoRow label="Fecha"  value={current.project_date} />
-          </Card>
+          {/* KPI cards en grid 2×2 */}
+          <div className="grid grid-cols-2 gap-2">
+            <StatCard icon={Package}     label="Modelo"     value={current.model}               color="#0A2463"  bg="#EBF0FB" />
+            <StatCard icon={Users}       label="Capacidad"  value={`${current.capacity} kg`}    sub={`${current.persons} pers.`} color="#7C3AED" bg="#F5F3FF" />
+            <StatCard icon={Layers}      label="Paradas"    value={`${current.stops} niveles`}   color="#0891b2"  bg="#E0F2FE" />
+            <StatCard icon={Gauge}       label="Velocidad"  value={`${current.speed} m/s`}       color="#059669"  bg="#ECFDF5" />
+          </div>
 
-          <Card title="Equipo" icon={Settings2}>
-            <InfoRow label="Modelo"    value={current.model} />
-            <InfoRow label="Uso"       value={current.use_type} />
-            <InfoRow label="Capacidad" value={`${current.capacity} kg`} />
-            <InfoRow label="Personas"  value={current.persons} />
-            <InfoRow label="Velocidad" value={`${current.speed} m/s`} />
-            <InfoRow label="Paradas"   value={current.stops} />
-            <InfoRow label="Cantidad"  value={`${current.quantity} equipo(s)`} />
-            <InfoRow label="Recorrido" value={`${((current.travel||0)/1000).toFixed(1)} m`} />
-            {!isMRL && !isHyd && <InfoRow label="Fosa"    value={`${current.pit} mm`} />}
-            {!isMRL && !isHyd && <InfoRow label="Huida"   value={`${current.overhead} mm`} />}
-            <InfoRow label="Cubo"      value={`${current.shaft_width}×${current.shaft_depth} mm`} />
-            <InfoRow label="Tracción"  value={autoTractionLabel(current.model, String(current.speed))} />
-            <InfoRow label="Rieles"    value={`${autoRails(current.model).cabin} / ${autoRails(current.model).counterweight}`} />
-            <InfoRow label="Normativa" value={current.norm} />
-          </Card>
+          {/* Cliente */}
+          <div className="luxury-glass rounded-2xl overflow-hidden border border-[#D4AF37]/10">
+            <div className="px-4 py-2.5 border-b border-[#0A2463]/6 bg-white/50 flex items-center gap-2">
+              <Building2 size={12} className="text-[#D4AF37]" />
+              <p className="text-[10px] font-black text-[#0A2463] uppercase tracking-[0.15em]">Cliente</p>
+            </div>
+            <div className="px-4 py-3">
+              <DetailRow label="Nombre" value={current.client_name} highlight />
+              <DetailRow label="Email"  value={current.client_email} />
+              <DetailRow label="Tel."   value={current.client_phone} />
+              <DetailRow label="Fecha"  value={current.project_date} />
+            </div>
+          </div>
 
-          <Card title="Cabina" icon={Settings2}>
-            <InfoRow label="Modelo"   value={current.cabin_model} />
-            <InfoRow label="Acabado"  value={current.cabin_finish} />
-            <InfoRow label="Piso"     value={current.cabin_floor} />
-            <InfoRow label="Plafón"   value={current.cop_model} />
-            <InfoRow label="Puerta"   value={current.door_type} />
-            <InfoRow label="Paso"     value={`${current.door_width}×${current.door_height} mm`} />
-            <InfoRow label="Piso nomen." value={generateFloorNomenclature(current.stops)} />
-          </Card>
+          {/* Especificaciones técnicas */}
+          <div className="luxury-glass rounded-2xl overflow-hidden border border-[#D4AF37]/10">
+            <div className="px-4 py-2.5 border-b border-[#0A2463]/6 bg-white/50 flex items-center gap-2">
+              <Settings2 size={12} className="text-[#D4AF37]" />
+              <p className="text-[10px] font-black text-[#0A2463] uppercase tracking-[0.15em]">Especificaciones técnicas</p>
+            </div>
+            <div className="px-4 py-3">
+              <DetailRow label="Modelo"    value={current.model} />
+              <DetailRow label="Uso"       value={current.use_type} />
+              <DetailRow label="Capacidad" value={`${current.capacity} kg / ${current.persons} personas`} />
+              <DetailRow label="Velocidad" value={`${current.speed} m/s`} />
+              <DetailRow label="Paradas"   value={current.stops} />
+              <DetailRow label="Cantidad"  value={`${current.quantity} equipo(s)`} />
+              <DetailRow label="Recorrido" value={`${((current.travel || 0) / 1000).toFixed(1)} m`} />
+              {!isMRL && !isHyd && <DetailRow label="Fosa"    value={`${current.pit} mm`} />}
+              {!isMRL && !isHyd && <DetailRow label="Huida"   value={`${current.overhead} mm`} />}
+              <DetailRow label="Cubo"      value={`${current.shaft_width} × ${current.shaft_depth} mm`} />
+              <DetailRow label="Tracción"  value={autoTractionLabel(current.model, String(current.speed))} />
+              <DetailRow label="Rieles"    value={`${autoRails(current.model).cabin} / ${autoRails(current.model).counterweight}`} />
+              <DetailRow label="Normativa" value={current.norm} />
+              <DetailRow label="Nomenclatura" value={generateFloorNomenclature(current.stops)} />
+            </div>
+          </div>
 
+          {/* Cabina */}
+          <div className="luxury-glass rounded-2xl overflow-hidden border border-[#D4AF37]/10">
+            <div className="px-4 py-2.5 border-b border-[#0A2463]/6 bg-white/50 flex items-center gap-2">
+              <Ruler size={12} className="text-[#D4AF37]" />
+              <p className="text-[10px] font-black text-[#0A2463] uppercase tracking-[0.15em]">Cabina</p>
+            </div>
+            <div className="px-4 py-3">
+              <DetailRow label="Acabado paredes" value={current.cabin_finish} />
+              <DetailRow label="Piso"            value={current.cabin_floor} />
+              <DetailRow label="Plafón"          value={current.cop_model} />
+              <DetailRow label="Puerta"          value={current.door_type} />
+              <DetailRow label="Paso de puerta"  value={`${current.door_width} × ${current.door_height} mm`} />
+              {extraLabels.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-[#0A2463]/5">
+                  <p className="text-[10px] font-medium text-[#0A2463]/40 mb-1.5">Extras</p>
+                  <div className="flex flex-wrap gap-1">
+                    {extraLabels.map((ex: string) => (
+                      <span key={ex} className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-[#0A2463]/8 text-[#0A2463]">
+                        {ex}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Notas internas */}
           {current.internal_notes && (
-            <Card title="Notas internas">
-              <p className="text-xs text-[#0A2463]/70 leading-relaxed">{current.internal_notes}</p>
-            </Card>
+            <div className="luxury-glass rounded-2xl overflow-hidden border border-amber-200/50">
+              <div className="px-4 py-2.5 border-b border-amber-100 bg-amber-50/50 flex items-center gap-2">
+                <AlertCircle size={12} className="text-amber-500" />
+                <p className="text-[10px] font-black text-amber-700 uppercase tracking-[0.15em]">Notas internas</p>
+              </div>
+              <div className="px-4 py-3">
+                <p className="text-xs text-[#0A2463]/70 leading-relaxed">{current.internal_notes}</p>
+              </div>
+            </div>
           )}
         </div>
 
-        {/* Historial */}
+        {/* ── RIGHT PANEL — Historial ── */}
         <div className="flex-1 overflow-y-auto p-6">
           <div className="max-w-2xl">
+
+            {/* Acciones rápidas */}
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              {current.client_email && (
+                <SendEmailButton quote={current} sellerName={sellerName} sellerTitle={sellerTitle} />
+              )}
+              {current.client_phone && (
+                <a href={`tel:${current.client_phone}`}
+                  className="luxury-glass rounded-2xl p-4 border border-[#D4AF37]/10 flex items-center gap-3 hover:border-[#D4AF37]/30 transition-all group">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center">
+                    <Phone size={16} className="text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-[#0A2463] group-hover:text-[#D4AF37] transition-colors">Llamar</p>
+                    <p className="text-[10px] text-[#0A2463]/40">{current.client_phone}</p>
+                  </div>
+                </a>
+              )}
+            </div>
+
+            {/* Historial */}
             <h2 className="text-base font-black text-[#0A2463] mb-5 flex items-center gap-2"
               style={{ fontFamily: "'Syne', sans-serif" }}>
               <Clock size={16} className="text-[#D4AF37]" />
@@ -285,21 +581,19 @@ export default function QuoteDetail({ quote, sellerName, sellerTitle, onBack, on
             </h2>
 
             {loadingH ? (
-              <div className="flex justify-center py-12">
-                <Loader2 size={24} className="animate-spin text-[#D4AF37]" />
-              </div>
+              <div className="flex justify-center py-12"><Loader2 size={24} className="animate-spin text-[#D4AF37]" /></div>
             ) : history.length === 0 ? (
-              <div className="flex flex-col items-center py-12 gap-3">
+              <div className="flex flex-col items-center py-16 gap-3">
                 <div className="w-14 h-14 rounded-2xl luxury-glass flex items-center justify-center">
                   <MessageSquare size={22} className="text-[#0A2463]/25" />
                 </div>
-                <p className="text-sm font-medium text-[#0A2463]/40">Sin cambios registrados aún</p>
+                <p className="text-sm font-medium text-[#0A2463]/40">Sin movimientos registrados</p>
               </div>
             ) : (
               <div className="relative">
-                <div className="absolute left-[18px] top-0 bottom-0 w-px bg-[#0A2463]/10" />
+                <div className="absolute left-[18px] top-0 bottom-0 w-px bg-[#0A2463]/8" />
                 <div className="space-y-4">
-                  {history.map((h, i) => {
+                  {history.map((h) => {
                     const sc = STATUS_CFG[h.to_status as QuoteStatus] ?? STATUS_CFG['Borrador'];
                     return (
                       <div key={h.id} className="flex gap-4 pl-2">
@@ -307,21 +601,25 @@ export default function QuoteDetail({ quote, sellerName, sellerTitle, onBack, on
                           <sc.icon size={14} />
                         </div>
                         <div className="flex-1 luxury-glass rounded-2xl p-4 border border-[#0A2463]/6">
-                          <div className="flex items-start justify-between gap-2 mb-1">
-                            <div>
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${sc.cls}`}>
                                 <span className="w-1.5 h-1.5 rounded-full" style={{ background: sc.dot }} />
                                 {sc.label}
                               </span>
                               {h.from_status && (
-                                <span className="text-[10px] text-[#0A2463]/40 ml-2">← {h.from_status}</span>
+                                <span className="text-[10px] text-[#0A2463]/35">← {h.from_status}</span>
                               )}
                             </div>
-                            <p className="text-[10px] text-[#0A2463]/35 shrink-0">
-                              {new Date(h.created_at).toLocaleString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            <p className="text-[10px] text-[#0A2463]/30 shrink-0 flex items-center gap-1">
+                              <CalendarDays size={10} />
+                              {new Date(h.created_at).toLocaleString('es-MX', {
+                                day: '2-digit', month: 'short', year: 'numeric',
+                                hour: '2-digit', minute: '2-digit'
+                              })}
                             </p>
                           </div>
-                          <p className="text-[11px] font-semibold text-[#D4AF37] mb-1">{h.user_name}</p>
+                          <p className="text-[11px] font-bold text-[#D4AF37] mb-1">{h.user_name}</p>
                           {h.note && (
                             <p className="text-xs text-[#0A2463]/60 leading-relaxed bg-white/60 rounded-xl px-3 py-2 mt-2">
                               {h.note}
@@ -332,21 +630,6 @@ export default function QuoteDetail({ quote, sellerName, sellerTitle, onBack, on
                     );
                   })}
                 </div>
-              </div>
-            )}
-
-            {/* Acción rápida: enviar por correo */}
-            {current.client_email && (
-              <div className="mt-6 luxury-glass rounded-2xl p-4 border border-[#D4AF37]/15 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-bold text-[#0A2463]">Enviar propuesta por correo</p>
-                  <p className="text-[11px] text-[#0A2463]/50">{current.client_email}</p>
-                </div>
-                <a href={`mailto:${current.client_email}?subject=Propuesta%20${current.folio}%20%E2%80%94%20Elevadores%20Alamex&body=Estimado%2Fa%20${encodeURIComponent(current.client_name)}%2C%0A%0AAdjunto%20la%20propuesta%20${current.folio}.%0A%0AQuedamos%20a%20sus%20%C3%B3rdenes.%0A${encodeURIComponent(sellerName)}`}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black text-white transition-all"
-                  style={{ background: '#0A2463', fontFamily: "'Syne', sans-serif" }}>
-                  <Mail size={13} /> Enviar
-                </a>
               </div>
             )}
           </div>
