@@ -27,7 +27,8 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
     const { data: { user }, error } = await userClient.auth.getUser();
-    if (error || !user) throw new Error('Usuario no autenticado');
+    if (error) throw new Error(`Session expired — ${error.message}`);
+    if (!user) throw new Error('Usuario no autenticado — vuelve a iniciar sesión');
 
     // Obtener config Odoo del perfil
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE);
@@ -37,16 +38,17 @@ serve(async (req) => {
     const body = await req.json();
     const { action, odooConfig: bodyCfg } = body;
 
-    // Config: del body (para autenticar por primera vez) o del perfil guardado
-    const cfg = bodyCfg || (profile?.odoo_config ? JSON.parse(profile.odoo_config) : null);
-    if (!cfg?.url) throw new Error('Sin configuración de Odoo. Configura tus credenciales primero.');
+    const baseUrl_from_body = (bodyCfg?.url || '').startsWith('http')
+      ? bodyCfg?.url
+      : `https://${bodyCfg?.url || ''}`;
 
-    const baseUrl = cfg.url.startsWith('http') ? cfg.url : `https://${cfg.url}`;
-    let result: any;
-
+    // Para autenticar no necesitamos config guardada — viene en el body
     if (action === 'authenticate') {
-      // Autenticar usuario/contraseña — devuelve uid
       const { db, email, password } = body;
+      if (!bodyCfg?.url || !db || !email || !password) {
+        throw new Error('Faltan campos: url, db, email y password son requeridos para autenticar');
+      }
+      const baseUrl = baseUrl_from_body;
       const res  = await fetch(`${baseUrl}/web/session/authenticate`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -54,14 +56,17 @@ serve(async (req) => {
           params: { db, login: email, password } }),
       });
       const text = await res.text();
-      if (!text) throw new Error(`Odoo en ${baseUrl} no respondió. Verifica que la URL sea correcta.`);
+      if (!text) throw new Error(`Odoo en ${baseUrl} no respondió. Verifica la URL.`);
       const data = JSON.parse(text);
       if (data.error) throw new Error(data.error.data?.message || 'Credenciales incorrectas');
       if (!data.result?.uid) throw new Error('No se pudo autenticar — verifica email y contraseña');
       result = { uid: data.result.uid, name: data.result.name };
 
     } else if (action === 'call_kw') {
-      // Llamada genérica a modelo Odoo
+      // Para call_kw sí necesitamos config del perfil
+      const cfg = bodyCfg || (profile?.odoo_config ? JSON.parse(profile.odoo_config) : null);
+      if (!cfg?.url) throw new Error('Sin configuración de Odoo guardada.');
+      const baseUrl = cfg.url.startsWith('http') ? cfg.url : `https://${cfg.url}`;
       const { model, method, args = [], kwargs = {} } = body;
       const headers: Record<string,string> = { 'Content-Type': 'application/json' };
       if (cfg.apiKey) headers['Authorization'] = `Basic ${btoa(`${cfg.uid}:${cfg.apiKey}`)}`;

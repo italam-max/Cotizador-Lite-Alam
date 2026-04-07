@@ -18,19 +18,34 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
 // ── Helper: llamar al proxy de Supabase ─────────────────────
 async function callProxy(action: string, params: Record<string, any>): Promise<any> {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error('Sin sesión activa');
+  // Refrescar sesión si está por expirar
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !session) {
+    // Intentar refrescar
+    const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError || !refreshed.session) throw new Error('Sesión expirada — vuelve a iniciar sesión');
+  }
+
+  // Obtener token fresco
+  const { data: { session: freshSession } } = await supabase.auth.getSession();
+  if (!freshSession?.access_token) throw new Error('Sin sesión activa');
 
   const res = await fetch(`${SUPABASE_URL}/functions/v1/odoo-proxy`, {
     method:  'POST',
     headers: {
       'Content-Type':  'application/json',
-      'Authorization': `Bearer ${session.access_token}`,
+      'Authorization': `Bearer ${freshSession.access_token}`,
     },
     body: JSON.stringify({ action, ...params }),
   });
 
-  const data = await res.json();
+  const text = await res.text();
+  if (!text) throw new Error('El proxy no respondió');
+
+  let data: any;
+  try { data = JSON.parse(text); }
+  catch { throw new Error(`Respuesta inválida del proxy: ${text.substring(0, 80)}`); }
+
   if (!data.ok) throw new Error(data.error || 'Error en proxy Odoo');
   return data.result;
 }
