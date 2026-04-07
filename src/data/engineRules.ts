@@ -187,7 +187,7 @@ export interface ValidationResult {
   isValid:  boolean;
 }
 
-export const validate = (q: Partial<Omit<Quote, keyof import('../services/pb').PBRecord>>): ValidationResult => {
+export const validate = (q: Partial<Quote>): ValidationResult => {
   const errors:   { field: string; msg: string }[] = [];
   const warnings: { field: string; msg: string }[] = [];
 

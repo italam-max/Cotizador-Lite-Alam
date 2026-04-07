@@ -227,7 +227,7 @@ function PDFPreviewModal({
 // ══════════════════════════════════════════════════════════
 export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onCancel }: Props) {
   const [step,       setStep]       = useState(1);
-  const [form,       setForm]       = useState<FormData>(() => quote ? { ...EMPTY_QUOTE, ...quote } : { ...EMPTY_QUOTE, owner_id: '' });
+  const [form,       setForm]       = useState<FormData>(() => (quote ? { ...EMPTY_QUOTE, ...quote } : { ...EMPTY_QUOTE, owner_id: '' }) as FormData);
   const [saving,     setSaving]     = useState(false);
   const [errors,     setErrors]     = useState<{ field: string; msg: string }[]>([]);
   const [warnings,   setWarnings]   = useState<{ field: string; msg: string }[]>([]);

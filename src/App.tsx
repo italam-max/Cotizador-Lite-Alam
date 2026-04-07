@@ -32,7 +32,7 @@ export default function App() {
     );
   }
 
-  if (!isLoggedIn) return <LoginPage onLogin={login} />;
+  if (!isLoggedIn) return <LoginPage onLogin={async (e, p) => { await login(e, p); }} />;
 
   // Nombre a mostrar: perfil > metadata de Supabase > email
   // Fallback seguro — el perfil puede tardar en cargar

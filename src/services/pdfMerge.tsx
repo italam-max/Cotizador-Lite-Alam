@@ -103,5 +103,5 @@ async function mergePDFs(
   finalDoc.setCreator('Cotizador Alamex 2.0');
 
   const finalBytes = await finalDoc.save();
-  return new Blob([finalBytes], { type: 'application/pdf' });
+  return new Blob([finalBytes.buffer as ArrayBuffer], { type: 'application/pdf' });
 }

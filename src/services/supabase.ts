@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 // ARCHIVO: src/services/supabase.ts
 // Cliente Supabase — reemplaza pb.ts
 // ⚠️  Pon tus credenciales en .env:
