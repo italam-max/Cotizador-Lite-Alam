@@ -3,6 +3,7 @@
 // una sola vez. Soporta API Key o usuario/contraseña.
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Zap, CheckCircle2, Loader2, Key, User, Lock, Globe, Database, Eye, EyeOff } from 'lucide-react';
 import { authenticateOdoo, saveOdooCredentials, getOdooCredentials, type OdooConfig } from '../../services/odooService';
 import { supabase } from '../../services/supabase';
@@ -110,11 +111,11 @@ export default function OdooConnect({ onClose }: Props) {
     } finally { setSaving(false); }
   };
 
-  return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center"
+  const modal = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center"
       style={{ background: 'rgba(4,13,26,0.85)', backdropFilter: 'blur(10px)' }}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden"
-        style={{ border: '1px solid rgba(212,175,55,0.25)' }}>
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden overflow-y-auto"
+        style={{ maxHeight: "90vh", border: '1px solid rgba(212,175,55,0.25)' }}>
 
         {/* Header */}
         <div className="px-7 py-5 flex items-center justify-between"
@@ -262,4 +263,5 @@ export default function OdooConnect({ onClose }: Props) {
       </div>
     </div>
   );
+  return createPortal(modal, document.body);
 }

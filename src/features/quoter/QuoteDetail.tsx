@@ -61,7 +61,7 @@ function DetailRow({ label, value, highlight }: { label: string; value?: any; hi
   if (!value && value !== 0) return null;
   return (
     <div className="flex items-center justify-between py-2 border-b border-[#0A2463]/5 last:border-0">
-      <span className="text-xs font-medium text-[#0A2463]/45">{label}</span>
+      <span className="text-m font-medium text-[#0A2463]/45">{label}</span>
       <span className={`text-xs font-semibold text-right max-w-[55%] truncate ${highlight ? 'text-[#D4AF37]' : 'text-[#0A2463]'}`}>
         {String(value)}
       </span>
@@ -437,8 +437,8 @@ export default function QuoteDetail({ quote, sellerName, sellerTitle, onBack, on
       {/* ── BODY ── */}
       <div className="flex-1 overflow-hidden flex relative z-10">
 
-        {/* ── LEFT PANEL ── */}
-        <div className="w-[340px] shrink-0 border-r border-[#0A2463]/8 overflow-y-auto p-4 space-y-4"
+        {/* ── LEFT PANEL — KPIs + acciones + historial ── */}
+        <div className="w-[360px] shrink-0 border-r border-[#0A2463]/8 overflow-y-auto p-5 space-y-4"
           style={{ background: 'rgba(255,255,255,0.5)' }}>
 
           {/* Precio destacado */}
@@ -463,99 +463,178 @@ export default function QuoteDetail({ quote, sellerName, sellerTitle, onBack, on
             </div>
           )}
 
-          {/* KPI cards en grid 2×2 */}
+          {/* KPI cards — 2 columnas, texto completo */}
           <div className="grid grid-cols-2 gap-2">
-            <StatCard icon={Package}     label="Modelo"     value={current.model}               color="#0A2463"  bg="#EBF0FB" />
-            <StatCard icon={Users}       label="Capacidad"  value={`${current.capacity} kg`}    sub={`${current.persons} pers.`} color="#7C3AED" bg="#F5F3FF" />
-            <StatCard icon={Layers}      label="Paradas"    value={`${current.stops} niveles`}   color="#0891b2"  bg="#E0F2FE" />
-            <StatCard icon={Gauge}       label="Velocidad"  value={`${current.speed} m/s`}       color="#059669"  bg="#ECFDF5" />
-          </div>
-
-          {/* Cliente */}
-          <div className="luxury-glass rounded-2xl overflow-hidden border border-[#D4AF37]/10">
-            <div className="px-4 py-2.5 border-b border-[#0A2463]/6 bg-white/50 flex items-center gap-2">
-              <Building2 size={12} className="text-[#D4AF37]" />
-              <p className="text-[10px] font-black text-[#0A2463] uppercase tracking-[0.15em]">Cliente</p>
-            </div>
-            <div className="px-4 py-3">
-              <DetailRow label="Nombre" value={current.client_name} highlight />
-              <DetailRow label="Email"  value={current.client_email} />
-              <DetailRow label="Tel."   value={current.client_phone} />
-              <DetailRow label="Fecha"  value={current.project_date} />
-            </div>
-          </div>
-
-          {/* Especificaciones técnicas */}
-          <div className="luxury-glass rounded-2xl overflow-hidden border border-[#D4AF37]/10">
-            <div className="px-4 py-2.5 border-b border-[#0A2463]/6 bg-white/50 flex items-center gap-2">
-              <Settings2 size={12} className="text-[#D4AF37]" />
-              <p className="text-[10px] font-black text-[#0A2463] uppercase tracking-[0.15em]">Especificaciones técnicas</p>
-            </div>
-            <div className="px-4 py-3">
-              <DetailRow label="Modelo"    value={current.model} />
-              <DetailRow label="Uso"       value={current.use_type} />
-              <DetailRow label="Capacidad" value={`${current.capacity} kg / ${current.persons} personas`} />
-              <DetailRow label="Velocidad" value={`${current.speed} m/s`} />
-              <DetailRow label="Paradas"   value={current.stops} />
-              <DetailRow label="Cantidad"  value={`${current.quantity} equipo(s)`} />
-              <DetailRow label="Recorrido" value={`${((current.travel || 0) / 1000).toFixed(1)} m`} />
-              {!isMRL && !isHyd && <DetailRow label="Fosa"    value={`${current.pit} mm`} />}
-              {!isMRL && !isHyd && <DetailRow label="Huida"   value={`${current.overhead} mm`} />}
-              <DetailRow label="Cubo"      value={`${current.shaft_width} × ${current.shaft_depth} mm`} />
-              <DetailRow label="Tracción"  value={autoTractionLabel(current.model, String(current.speed))} />
-              <DetailRow label="Rieles"    value={`${autoRails(current.model).cabin} / ${autoRails(current.model).counterweight}`} />
-              <DetailRow label="Normativa" value={current.norm} />
-              <DetailRow label="Nomenclatura" value={generateFloorNomenclature(current.stops)} />
-            </div>
-          </div>
-
-          {/* Cabina */}
-          <div className="luxury-glass rounded-2xl overflow-hidden border border-[#D4AF37]/10">
-            <div className="px-4 py-2.5 border-b border-[#0A2463]/6 bg-white/50 flex items-center gap-2">
-              <Ruler size={12} className="text-[#D4AF37]" />
-              <p className="text-[10px] font-black text-[#0A2463] uppercase tracking-[0.15em]">Cabina</p>
-            </div>
-            <div className="px-4 py-3">
-              <DetailRow label="Acabado paredes" value={current.cabin_finish} />
-              <DetailRow label="Piso"            value={current.cabin_floor} />
-              <DetailRow label="Plafón"          value={current.cop_model} />
-              <DetailRow label="Puerta"          value={current.door_type} />
-              <DetailRow label="Paso de puerta"  value={`${current.door_width} × ${current.door_height} mm`} />
-              {extraLabels.length > 0 && (
-                <div className="mt-2 pt-2 border-t border-[#0A2463]/5">
-                  <p className="text-[10px] font-medium text-[#0A2463]/40 mb-1.5">Extras</p>
-                  <div className="flex flex-wrap gap-1">
-                    {extraLabels.map((ex: string) => (
-                      <span key={ex} className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-[#0A2463]/8 text-[#0A2463]">
-                        {ex}
-                      </span>
-                    ))}
+            {[
+              { icon: Package,  label: 'Modelo',    value: current.model,                   color: '#0A2463', bg: '#EBF0FB' },
+              { icon: Users,    label: 'Capacidad', value: `${current.capacity} kg`,         color: '#7C3AED', bg: '#F5F3FF', sub: `${current.persons} personas` },
+              { icon: Layers,   label: 'Paradas',   value: `${current.stops} niveles`,       color: '#0891b2', bg: '#E0F2FE' },
+              { icon: Gauge,    label: 'Velocidad', value: `${current.speed} m/s`,           color: '#059669', bg: '#ECFDF5' },
+            ].map(({ icon: Icon, label, value, color, bg, sub }) => (
+              <div key={label} className="luxury-glass rounded-xl p-3 border border-[#D4AF37]/10 shadow-sm">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: bg }}>
+                    <Icon size={14} style={{ color }} />
                   </div>
+                  <p className="text-[9px] font-bold text-[#0A2463]/40 uppercase tracking-wider">{label}</p>
                 </div>
-              )}
-            </div>
+                <p className="font-black text-sm text-[#0A2463] leading-tight" style={{ fontFamily: "'Syne', sans-serif" }}>
+                  {value}
+                </p>
+                {sub && <p className="text-[9px] text-[#0A2463]/40 mt-0.5">{sub}</p>}
+              </div>
+            ))}
           </div>
 
-          {/* Notas internas */}
-          {current.internal_notes && (
-            <div className="luxury-glass rounded-2xl overflow-hidden border border-amber-200/50">
-              <div className="px-4 py-2.5 border-b border-amber-100 bg-amber-50/50 flex items-center gap-2">
-                <AlertCircle size={12} className="text-amber-500" />
-                <p className="text-[10px] font-black text-amber-700 uppercase tracking-[0.15em]">Notas internas</p>
+          {/* Historial mini — panel izquierdo */}
+          <div>
+            <div className="h-px bg-[#0A2463]/8 mb-3" />
+            {loadingH ? (
+              <div className="flex justify-center py-3"><Loader2 size={16} className="animate-spin text-[#D4AF37]" /></div>
+            ) : history.length === 0 ? (
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-[#0A2463]/4">
+                <MessageSquare size={12} className="text-[#0A2463]/25" />
+                <p className="text-[10px] text-[#0A2463]/40">Sin movimientos aún</p>
               </div>
-              <div className="px-4 py-3">
-                <p className="text-xs text-[#0A2463]/70 leading-relaxed">{current.internal_notes}</p>
+            ) : (
+              <div className="space-y-1.5">
+                {history.map((h) => {
+                  const sc = STATUS_CFG[h.to_status as QuoteStatus] ?? STATUS_CFG['Borrador'];
+                  return (
+                    <div key={h.id} className="flex gap-2 items-start">
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 border ${sc.cls}`}>
+                        <sc.icon size={9} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-[9px] font-bold text-[#0A2463]">{sc.label}</span>
+                          <span className="text-[8px] text-[#0A2463]/30 shrink-0">
+                            {new Date(h.created_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
+                          </span>
+                        </div>
+                        <p className="text-[9px] text-[#D4AF37] font-medium truncate">{h.user_name}</p>
+                        {h.note && <p className="text-[9px] text-[#0A2463]/50 truncate">{h.note}</p>}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        {/* ── RIGHT PANEL — Historial ── */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-2xl">
+        {/* ── RIGHT PANEL — Info detallada de la oportunidad ── */}
+        <div className="flex-1 overflow-y-auto p-5">
+          <div className="max-w-full">
+
+            {/* Título */}
+            <h2 className="text-lg font-black text-[#0A2463] mb-4 flex items-center gap-2"
+              style={{ fontFamily: "'Syne', sans-serif" }}>
+              <Sparkles size={16} className="text-[#D4AF37]" />
+              Detalle de la oportunidad
+            </h2>
+
+            {/* Grid de 3 columnas con toda la info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-5">
+
+              {/* Col 1 — Cliente */}
+              <div className="luxury-glass rounded-2xl overflow-hidden border border-[#D4AF37]/10">
+                <div className="px-4 py-2.5 border-b border-[#0A2463]/6 bg-[#0A2463]/3 flex items-center gap-2">
+                  <Building2 size={11} className="text-[#D4AF37]" />
+                  <p className="text-[15px] font-black text-[#0A2463] uppercase tracking-widest">Cliente</p>
+                </div>
+                <div className="px-4 py-3 space-y-2">
+                  <div>
+                    <p className="text-[15px] text-[#0A2463]/40 mb-0.5 uppercase tracking-wide">Nombre</p>
+                    <p className="text-m font-bold text-[#D4AF37] leading-tight">{current.client_name}</p>
+                  </div>
+                  {current.client_email && <div>
+                    <p className="text-[15px] text-[#0A2463]/40 mb-0.5 uppercase tracking-wide">Email</p>
+                    <p className="text-m font-medium text-[#0A2463]">{current.client_email}</p>
+                  </div>}
+                  {current.client_phone && <div>
+                    <p className="text-[15px] text-[#0A2463]/40 mb-0.5 uppercase tracking-wide">Teléfono</p>
+                    <p className="text-m font-medium text-[#0A2463]">{current.client_phone}</p>
+                  </div>}
+                  <div>
+                    <p className="text-[15px] text-[#0A2463]/40 mb-0.5 uppercase tracking-wide">Fecha</p>
+                    <p className="text-m font-medium text-[#0A2463]">{current.project_date}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Col 2 — Equipo */}
+              <div className="luxury-glass rounded-2xl overflow-hidden border border-[#D4AF37]/10">
+                <div className="px-4 py-2.5 border-b border-[#0A2463]/6 bg-[#0A2463]/3 flex items-center gap-2">
+                  <Package size={11} className="text-[#D4AF37]" />
+                  <p className="text-[15px] font-black text-[#0A2463] uppercase tracking-widest">Equipo</p>
+                </div>
+                <div className="px-4 py-3 space-y-1.5">
+                  {[
+                    ['Modelo',    `${current.model} · ${current.use_type}`],
+                    ['Capacidad', `${current.capacity} kg / ${current.persons} pers.`],
+                    ['Paradas',   `${current.stops} niveles`],
+                    ['Velocidad', `${current.speed} m/s`],
+                    ['Recorrido', `${((current.travel||0)/1000).toFixed(1)} m`],
+                    ['Cubo',      `${current.shaft_width}×${current.shaft_depth} mm`],
+                    ['Tracción',  autoTractionLabel(current.model, String(current.speed))],
+                    ['Normativa', current.norm],
+                  ].map(([label, value]) => (
+                    <div key={label} className="flex justify-between gap-1">
+                      <span className="text-[15px] text-[#0A2463]/40 shrink-0">{label}</span>
+                      <span className="text-[15px] font-semibold text-[#0A2463] text-right truncate max-w-[110px]">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Col 3 — Cabina + Precio */}
+              <div className="space-y-3">
+                <div className="luxury-glass rounded-2xl overflow-hidden border border-[#D4AF37]/10">
+                  <div className="px-4 py-2.5 border-b border-[#0A2463]/6 bg-[#0A2463]/3 flex items-center gap-2">
+                    <Ruler size={11} className="text-[#D4AF37]" />
+                    <p className="text-[15px] font-black text-[#0A2463] uppercase tracking-widest">Cabina</p>
+                  </div>
+                  <div className="px-4 py-3 space-y-1.5">
+                    {[
+                      ['Paredes',  current.cabin_finish || '—'],
+                      ['Piso',     current.cabin_floor  || '—'],
+                      ['Plafón',   current.cop_model    || '—'],
+                      ['Puerta',   current.door_type    || '—'],
+                      ['Paso',     `${current.door_width}×${current.door_height} mm`],
+                      ['Rieles',   `${autoRails(current.model).cabin}/${autoRails(current.model).counterweight}`],
+                    ].map(([label, value]) => (
+                      <div key={label} className="flex justify-between gap-1">
+                        <span className="text-[15px] text-[#0A2463]/40 shrink-0">{label}</span>
+                        <span className="text-[15px] font-semibold text-[#0A2463] text-right truncate max-w-[100px]">{value}</span>
+                      </div>
+                    ))}
+                    {extraLabels.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {extraLabels.map((ex: string) => (
+                          <span key={ex} className="text-[8px] font-semibold px-1.5 py-0.5 rounded-full bg-[#0A2463]/8 text-[#0A2463]">{ex}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+
+              </div>
+            </div>
+
+            {/* Notas internas si las hay */}
+            {current.internal_notes && (
+              <div className="luxury-glass rounded-2xl p-4 border border-amber-200/50 mb-4">
+                <p className="text-[15px] font-black text-amber-600 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                  <AlertCircle size={10} /> Notas internas
+                </p>
+                <p className="text-m text-[#0A2463]/70 leading-relaxed">{current.internal_notes}</p>
+              </div>
+            )}
 
             {/* Acciones rápidas */}
-            <div className="grid grid-cols-2 gap-3 mb-6">
+            <div className="grid grid-cols-2 gap-3 mb-5">
               {current.client_email && (
                 <SendEmailButton quote={current} sellerName={sellerName} sellerTitle={sellerTitle} />
               )}
@@ -566,72 +645,14 @@ export default function QuoteDetail({ quote, sellerName, sellerTitle, onBack, on
                     <Phone size={16} className="text-emerald-600" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-[#0A2463] group-hover:text-[#D4AF37] transition-colors">Llamar</p>
-                    <p className="text-[10px] text-[#0A2463]/40">{current.client_phone}</p>
+                    <p className="text-m font-bold text-[#0A2463] group-hover:text-[#D4AF37] transition-colors">Llamar</p>
+                    <p className="text-[15px] text-[#0A2463]/40">{current.client_phone}</p>
                   </div>
                 </a>
               )}
             </div>
 
-            {/* Historial */}
-            <h2 className="text-base font-black text-[#0A2463] mb-5 flex items-center gap-2"
-              style={{ fontFamily: "'Syne', sans-serif" }}>
-              <Clock size={16} className="text-[#D4AF37]" />
-              Historial de seguimiento
-            </h2>
 
-            {loadingH ? (
-              <div className="flex justify-center py-12"><Loader2 size={24} className="animate-spin text-[#D4AF37]" /></div>
-            ) : history.length === 0 ? (
-              <div className="flex flex-col items-center py-16 gap-3">
-                <div className="w-14 h-14 rounded-2xl luxury-glass flex items-center justify-center">
-                  <MessageSquare size={22} className="text-[#0A2463]/25" />
-                </div>
-                <p className="text-sm font-medium text-[#0A2463]/40">Sin movimientos registrados</p>
-              </div>
-            ) : (
-              <div className="relative">
-                <div className="absolute left-[18px] top-0 bottom-0 w-px bg-[#0A2463]/8" />
-                <div className="space-y-4">
-                  {history.map((h) => {
-                    const sc = STATUS_CFG[h.to_status as QuoteStatus] ?? STATUS_CFG['Borrador'];
-                    return (
-                      <div key={h.id} className="flex gap-4 pl-2">
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 z-10 border ${sc.cls}`}>
-                          <sc.icon size={14} />
-                        </div>
-                        <div className="flex-1 luxury-glass rounded-2xl p-4 border border-[#0A2463]/6">
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${sc.cls}`}>
-                                <span className="w-1.5 h-1.5 rounded-full" style={{ background: sc.dot }} />
-                                {sc.label}
-                              </span>
-                              {h.from_status && (
-                                <span className="text-[10px] text-[#0A2463]/35">← {h.from_status}</span>
-                              )}
-                            </div>
-                            <p className="text-[10px] text-[#0A2463]/30 shrink-0 flex items-center gap-1">
-                              <CalendarDays size={10} />
-                              {new Date(h.created_at).toLocaleString('es-MX', {
-                                day: '2-digit', month: 'short', year: 'numeric',
-                                hour: '2-digit', minute: '2-digit'
-                              })}
-                            </p>
-                          </div>
-                          <p className="text-[11px] font-bold text-[#D4AF37] mb-1">{h.user_name}</p>
-                          {h.note && (
-                            <p className="text-xs text-[#0A2463]/60 leading-relaxed bg-white/60 rounded-xl px-3 py-2 mt-2">
-                              {h.note}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>

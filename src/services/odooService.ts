@@ -38,42 +38,86 @@ export async function getOdooCredentials(userId: string): Promise<OdooConfig | n
 
 // ── Autenticar con usuario/contraseña y obtener UID ─────────
 export async function authenticateOdoo(url: string, db: string, email: string, password: string): Promise<number> {
-  const res = await fetch(`${url}/web/session/authenticate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      jsonrpc: '2.0', method: 'call', id: 1,
-      params: { db, login: email, password },
-    }),
-  });
-  const data = await res.json();
-  if (data.error) throw new Error(data.error.data?.message || 'Error de autenticación Odoo');
-  if (!data.result?.uid) throw new Error('Credenciales incorrectas');
+  // Asegurar que la URL tenga protocolo
+  const baseUrl = url.startsWith('http') ? url : `https://${url}`;
+
+  let res: Response;
+  try {
+    res = await fetch(`${baseUrl}/web/session/authenticate`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0', method: 'call', id: 1,
+        params: { db, login: email, password },
+      }),
+    });
+  } catch (e: any) {
+    // Error de red — CORS, DNS, o URL incorrecta
+    if (e.message?.includes('Failed to fetch') || e.message?.includes('NetworkError')) {
+      throw new Error(
+        `No se pudo conectar a ${baseUrl}. Verifica:\n` +
+        `• Que la URL sea correcta (ej: https://odoo.alam.mx)\n` +
+        `• Que Odoo esté accesible desde internet\n` +
+        `• Posible bloqueo CORS — Odoo debe permitir requests desde ${window.location.origin}`
+      );
+    }
+    throw new Error(`Error de red: ${e.message}`);
+  }
+
+  // Verificar que la respuesta sea JSON válido
+  const text = await res.text();
+  if (!text || text.trim() === '') {
+    throw new Error(`Odoo devolvió una respuesta vacía. Verifica la URL y base de datos.`);
+  }
+
+  let data: any;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error(
+      `Odoo devolvió una respuesta inválida. Respuesta recibida:\n"${text.substring(0, 100)}..."\n` +
+      `Verifica que la URL apunte a Odoo correctamente.`
+    );
+  }
+
+  if (data.error) throw new Error(data.error.data?.message || data.error.message || 'Error de autenticación');
+  if (!data.result?.uid) throw new Error('Credenciales incorrectas — verifica email y contraseña');
   return data.result.uid;
 }
 
 // ── Llamada genérica al JSON-RPC de Odoo ────────────────────
 async function callOdoo(config: OdooConfig, model: string, method: string, args: any[], kwargs: any = {}): Promise<any> {
+  const baseUrl = config.url.startsWith('http') ? config.url : `https://${config.url}`;
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
 
-  // API Key como Basic Auth (Odoo 16+)
   if (config.apiKey) {
     headers['Authorization'] = `Basic ${btoa(`${config.uid}:${config.apiKey}`)}`;
   }
 
-  const res = await fetch(`${config.url}/web/dataset/call_kw`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      jsonrpc: '2.0', method: 'call', id: Math.floor(Math.random() * 1000),
-      params: {
-        model, method, args,
-        kwargs: { ...kwargs, context: { uid: config.uid, ...(kwargs.context || {}) } },
-      },
-    }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${baseUrl}/web/dataset/call_kw`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        jsonrpc: '2.0', method: 'call', id: Math.floor(Math.random() * 1000),
+        params: {
+          model, method, args,
+          kwargs: { ...kwargs, context: { uid: config.uid, ...(kwargs.context || {}) } },
+        },
+      }),
+    });
+  } catch (e: any) {
+    throw new Error(`Error de conexión con Odoo: ${e.message}`);
+  }
 
-  const data = await res.json();
+  const text = await res.text();
+  if (!text || text.trim() === '') throw new Error('Odoo devolvió una respuesta vacía');
+
+  let data: any;
+  try { data = JSON.parse(text); }
+  catch { throw new Error(`Respuesta inválida de Odoo: "${text.substring(0, 80)}..."`); }
+
   if (data.error) throw new Error(data.error.data?.message || data.error.message || 'Error Odoo');
   return data.result;
 }

@@ -4,6 +4,7 @@
 // El intercambio de código → token lo hace la Supabase Edge Function.
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Mail, CheckCircle2, Loader2, ExternalLink, RefreshCw } from 'lucide-react';
 import { supabase } from '../../services/supabase';
 
@@ -116,8 +117,8 @@ export default function ZohoConnect({ onClose }: Props) {
     setStatus('idle'); setEmail(''); setMsg('');
   };
 
-  return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center"
+  const modal = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center"
       style={{ background: 'rgba(4,13,26,0.85)', backdropFilter: 'blur(10px)' }}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md mx-4 overflow-hidden"
         style={{ border: '1px solid rgba(212,175,55,0.25)' }}>
@@ -220,4 +221,5 @@ export default function ZohoConnect({ onClose }: Props) {
       </div>
     </div>
   );
+  return createPortal(modal, document.body);
 }
