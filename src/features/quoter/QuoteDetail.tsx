@@ -61,7 +61,7 @@ function DetailRow({ label, value, highlight }: { label: string; value?: any; hi
   if (!value && value !== 0) return null;
   return (
     <div className="flex items-center justify-between py-2 border-b border-[#0A2463]/5 last:border-0">
-      <span className="text-m font-medium text-[#0A2463]/45">{label}</span>
+      <span className="text-xs font-medium text-[#0A2463]/45">{label}</span>
       <span className={`text-xs font-semibold text-right max-w-[55%] truncate ${highlight ? 'text-[#D4AF37]' : 'text-[#0A2463]'}`}>
         {String(value)}
       </span>
@@ -134,7 +134,7 @@ function OdooButton({ quote }: { quote: Quote }) {
         return;
       }
 
-      const { leadId } = await sendQuoteToOdoo(config, quote);
+      const { leadId } = await sendQuoteToOdoo(quote);
       setStatus('ok');
       setMsg(`✓ Oportunidad ${leadId} creada en Odoo CRM`);
     } catch (e: any) {
@@ -541,24 +541,24 @@ export default function QuoteDetail({ quote, sellerName, sellerTitle, onBack, on
               <div className="luxury-glass rounded-2xl overflow-hidden border border-[#D4AF37]/10">
                 <div className="px-4 py-2.5 border-b border-[#0A2463]/6 bg-[#0A2463]/3 flex items-center gap-2">
                   <Building2 size={11} className="text-[#D4AF37]" />
-                  <p className="text-[15px] font-black text-[#0A2463] uppercase tracking-widest">Cliente</p>
+                  <p className="text-[9px] font-black text-[#0A2463] uppercase tracking-widest">Cliente</p>
                 </div>
                 <div className="px-4 py-3 space-y-2">
                   <div>
-                    <p className="text-[15px] text-[#0A2463]/40 mb-0.5 uppercase tracking-wide">Nombre</p>
-                    <p className="text-m font-bold text-[#D4AF37] leading-tight">{current.client_name}</p>
+                    <p className="text-[10px] text-[#0A2463]/40 mb-0.5 uppercase tracking-wide">Nombre</p>
+                    <p className="text-sm font-bold text-[#D4AF37] leading-tight">{current.client_name}</p>
                   </div>
                   {current.client_email && <div>
-                    <p className="text-[15px] text-[#0A2463]/40 mb-0.5 uppercase tracking-wide">Email</p>
-                    <p className="text-m font-medium text-[#0A2463]">{current.client_email}</p>
+                    <p className="text-[10px] text-[#0A2463]/40 mb-0.5 uppercase tracking-wide">Email</p>
+                    <p className="text-xs font-medium text-[#0A2463]">{current.client_email}</p>
                   </div>}
                   {current.client_phone && <div>
-                    <p className="text-[15px] text-[#0A2463]/40 mb-0.5 uppercase tracking-wide">Teléfono</p>
-                    <p className="text-m font-medium text-[#0A2463]">{current.client_phone}</p>
+                    <p className="text-[10px] text-[#0A2463]/40 mb-0.5 uppercase tracking-wide">Teléfono</p>
+                    <p className="text-xs font-medium text-[#0A2463]">{current.client_phone}</p>
                   </div>}
                   <div>
-                    <p className="text-[15px] text-[#0A2463]/40 mb-0.5 uppercase tracking-wide">Fecha</p>
-                    <p className="text-m font-medium text-[#0A2463]">{current.project_date}</p>
+                    <p className="text-[10px] text-[#0A2463]/40 mb-0.5 uppercase tracking-wide">Fecha</p>
+                    <p className="text-xs font-medium text-[#0A2463]">{current.project_date}</p>
                   </div>
                 </div>
               </div>
@@ -567,7 +567,7 @@ export default function QuoteDetail({ quote, sellerName, sellerTitle, onBack, on
               <div className="luxury-glass rounded-2xl overflow-hidden border border-[#D4AF37]/10">
                 <div className="px-4 py-2.5 border-b border-[#0A2463]/6 bg-[#0A2463]/3 flex items-center gap-2">
                   <Package size={11} className="text-[#D4AF37]" />
-                  <p className="text-[15px] font-black text-[#0A2463] uppercase tracking-widest">Equipo</p>
+                  <p className="text-[9px] font-black text-[#0A2463] uppercase tracking-widest">Equipo</p>
                 </div>
                 <div className="px-4 py-3 space-y-1.5">
                   {[
@@ -581,8 +581,8 @@ export default function QuoteDetail({ quote, sellerName, sellerTitle, onBack, on
                     ['Normativa', current.norm],
                   ].map(([label, value]) => (
                     <div key={label} className="flex justify-between gap-1">
-                      <span className="text-[15px] text-[#0A2463]/40 shrink-0">{label}</span>
-                      <span className="text-[15px] font-semibold text-[#0A2463] text-right truncate max-w-[110px]">{value}</span>
+                      <span className="text-[9px] text-[#0A2463]/40 shrink-0">{label}</span>
+                      <span className="text-[9px] font-semibold text-[#0A2463] text-right truncate max-w-[110px]">{value}</span>
                     </div>
                   ))}
                 </div>
@@ -593,7 +593,7 @@ export default function QuoteDetail({ quote, sellerName, sellerTitle, onBack, on
                 <div className="luxury-glass rounded-2xl overflow-hidden border border-[#D4AF37]/10">
                   <div className="px-4 py-2.5 border-b border-[#0A2463]/6 bg-[#0A2463]/3 flex items-center gap-2">
                     <Ruler size={11} className="text-[#D4AF37]" />
-                    <p className="text-[15px] font-black text-[#0A2463] uppercase tracking-widest">Cabina</p>
+                    <p className="text-[9px] font-black text-[#0A2463] uppercase tracking-widest">Cabina</p>
                   </div>
                   <div className="px-4 py-3 space-y-1.5">
                     {[
@@ -605,8 +605,8 @@ export default function QuoteDetail({ quote, sellerName, sellerTitle, onBack, on
                       ['Rieles',   `${autoRails(current.model).cabin}/${autoRails(current.model).counterweight}`],
                     ].map(([label, value]) => (
                       <div key={label} className="flex justify-between gap-1">
-                        <span className="text-[15px] text-[#0A2463]/40 shrink-0">{label}</span>
-                        <span className="text-[15px] font-semibold text-[#0A2463] text-right truncate max-w-[100px]">{value}</span>
+                        <span className="text-[9px] text-[#0A2463]/40 shrink-0">{label}</span>
+                        <span className="text-[9px] font-semibold text-[#0A2463] text-right truncate max-w-[100px]">{value}</span>
                       </div>
                     ))}
                     {extraLabels.length > 0 && (
@@ -626,10 +626,10 @@ export default function QuoteDetail({ quote, sellerName, sellerTitle, onBack, on
             {/* Notas internas si las hay */}
             {current.internal_notes && (
               <div className="luxury-glass rounded-2xl p-4 border border-amber-200/50 mb-4">
-                <p className="text-[15px] font-black text-amber-600 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                <p className="text-[9px] font-black text-amber-600 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
                   <AlertCircle size={10} /> Notas internas
                 </p>
-                <p className="text-m text-[#0A2463]/70 leading-relaxed">{current.internal_notes}</p>
+                <p className="text-xs text-[#0A2463]/70 leading-relaxed">{current.internal_notes}</p>
               </div>
             )}
 
@@ -645,8 +645,8 @@ export default function QuoteDetail({ quote, sellerName, sellerTitle, onBack, on
                     <Phone size={16} className="text-emerald-600" />
                   </div>
                   <div>
-                    <p className="text-m font-bold text-[#0A2463] group-hover:text-[#D4AF37] transition-colors">Llamar</p>
-                    <p className="text-[15px] text-[#0A2463]/40">{current.client_phone}</p>
+                    <p className="text-xs font-bold text-[#0A2463] group-hover:text-[#D4AF37] transition-colors">Llamar</p>
+                    <p className="text-[10px] text-[#0A2463]/40">{current.client_phone}</p>
                   </div>
                 </a>
               )}

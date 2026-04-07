@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Zap, CheckCircle2, Loader2, Key, User, Lock, Globe, Database, Eye, EyeOff } from 'lucide-react';
-import { authenticateOdoo, saveOdooCredentials, getOdooCredentials, type OdooConfig } from '../../services/odooService';
+import { testOdooConnection, saveOdooCredentials, getOdooCredentials, type OdooConfig } from '../../services/odooService';
 import { supabase } from '../../services/supabase';
 
 interface Props {
@@ -55,10 +55,10 @@ export default function OdooConnect({ onClose }: Props) {
 
       if (mode === 'password') {
         if (!email || !password) throw new Error('Email y contraseña son requeridos');
-        const detectedUid = await authenticateOdoo(url, db, email, password);
-        setUid(String(detectedUid));
+        const result = await testOdooConnection(url, db, email, password);
+        setUid(String(result.uid));
         setTestStatus('ok');
-        setTestMsg(`✓ Conectado como UID ${detectedUid}`);
+        setTestMsg(`✓ Conectado como "${result.name}" (UID ${result.uid})`);
       } else {
         if (!apiKey || !uid) throw new Error('API Key y UID son requeridos');
         // Test con search en res.users
