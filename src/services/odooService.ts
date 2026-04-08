@@ -1,8 +1,7 @@
 // ARCHIVO: src/services/odooService.ts
-// Todas las llamadas a Odoo van via Supabase Edge Function (odoo-proxy)
-// para evitar restricciones CORS del browser.
+// Llama al API Route /api/odoo (Vercel serverless)
+// Sin dependencia de sesión Supabase — las credenciales viven en el servidor.
 
-import { supabase } from './supabase';
 import type { Quote } from '../types';
 
 export interface OdooConfig {
@@ -14,87 +13,65 @@ export interface OdooConfig {
   method?: 'apikey' | 'password';
 }
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-
-// ── Helper: llamar al proxy de Supabase ─────────────────────
-async function callProxy(action: string, params: Record<string, any>): Promise<any> {
-  // Refrescar sesión si está por expirar
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-  if (sessionError || !session) {
-    // Intentar refrescar
-    const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
-    if (refreshError || !refreshed.session) throw new Error('Sesión expirada — vuelve a iniciar sesión');
-  }
-
-  // Obtener token fresco
-  const { data: { session: freshSession } } = await supabase.auth.getSession();
-  if (!freshSession?.access_token) throw new Error('Sin sesión activa');
-
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/odoo-proxy`, {
+// ── Helper: llamar al proxy de Vercel ────────────────────────
+async function callProxy(action: string, params: Record<string, unknown>): Promise<unknown> {
+  const res = await fetch('/api/odoo', {
     method:  'POST',
-    headers: {
-      'Content-Type':  'application/json',
-      'Authorization': `Bearer ${freshSession.access_token}`,
-    },
-    body: JSON.stringify({ action, ...params }),
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ action, ...params }),
   });
 
   const text = await res.text();
   if (!text) throw new Error('El proxy no respondió');
 
-  let data: any;
+  let data: Record<string, unknown>;
   try { data = JSON.parse(text); }
-  catch { throw new Error(`Respuesta inválida del proxy: ${text.substring(0, 80)}`); }
+  catch { throw new Error(`Respuesta inválida del proxy: ${text.substring(0, 100)}`); }
 
-  if (!data.ok) throw new Error(data.error || 'Error en proxy Odoo');
+  if (!data.ok) throw new Error((data.error as string) || 'Error en proxy Odoo');
   return data.result;
 }
 
-// ── Autenticar con usuario/contraseña → obtener UID ─────────
-export async function authenticateOdoo(
-  url: string, db: string, email: string, password: string
-): Promise<{ uid: number; name: string }> {
-  const baseUrl = url.startsWith('http') ? url : `https://${url}`;
-  return callProxy('authenticate', { odooConfig: { url: baseUrl, db }, db, email, password });
-}
-
-// ── Guardar credenciales en Supabase ─────────────────────────
-export async function saveOdooCredentials(userId: string, config: OdooConfig): Promise<void> {
-  const { error } = await (supabase as any)
-    .from('profiles')
-    .update({ odoo_config: JSON.stringify(config) })
-    .eq('id', userId);
-  if (error) throw error;
-}
-
-// ── Leer credenciales del perfil ─────────────────────────────
-export async function getOdooCredentials(userId: string): Promise<OdooConfig | null> {
-  const { data } = await (supabase as any)
-    .from('profiles').select('odoo_config').eq('id', userId).single();
-  if (!data?.odoo_config) return null;
-  try { return JSON.parse(data.odoo_config); } catch { return null; }
-}
-
-// ── Llamada genérica a Odoo via proxy ────────────────────────
-async function callOdoo(model: string, method: string, args: any[] = [], kwargs: any = {}): Promise<any> {
+// ── Llamada genérica a Odoo ───────────────────────────────────
+async function callOdoo(
+  model:  string,
+  method: string,
+  args:   unknown[] = [],
+  kwargs: Record<string, unknown> = {}
+): Promise<unknown> {
   return callProxy('call_kw', { model, method, args, kwargs });
 }
 
-// ── Buscar o crear cliente (res.partner) ────────────────────
-async function findOrCreatePartner(name: string, email?: string, phone?: string): Promise<number> {
-  const found = await callOdoo('res.partner', 'search_read',
-    [[['name', '=', name]]], { fields: ['id', 'name'], limit: 1 });
+// ── Buscar o crear cliente (res.partner) ─────────────────────
+async function findOrCreatePartner(
+  name:   string,
+  email?: string,
+  phone?: string
+): Promise<number> {
+  const found = await callOdoo(
+    'res.partner', 'search_read',
+    [[['name', '=', name]]],
+    { fields: ['id', 'name'], limit: 1 }
+  ) as Array<{ id: number }>;
+
   if (found?.length > 0) return found[0].id;
 
   return callOdoo('res.partner', 'create', [{
-    name, email: email || '', phone: phone || '',
-    company_type: 'company', is_company: true,
-  }]);
+    name,
+    email:        email || '',
+    phone:        phone || '',
+    company_type: 'company',
+    is_company:   true,
+  }]) as Promise<number>;
 }
 
-// ── Crear oportunidad en CRM ─────────────────────────────────
+// ── Crear oportunidad en CRM (aparece como OdooBot) ──────────
 async function createCRMLead(params: {
-  name: string; partnerId: number; revenue: number; description: string;
+  name:        string;
+  partnerId:   number;
+  revenue:     number;
+  description: string;
+  folio:       string;
 }): Promise<number> {
   return callOdoo('crm.lead', 'create', [{
     name:            params.name,
@@ -102,15 +79,21 @@ async function createCRMLead(params: {
     planned_revenue: params.revenue,
     description:     params.description,
     type:            'opportunity',
-  }]);
+    user_id:         1,            // OdooBot como responsable
+    ref:             params.folio, // Folio de la cotización
+  }]) as Promise<number>;
 }
 
 // ── Enviar cotización a Odoo CRM ─────────────────────────────
-export async function sendQuoteToOdoo(quote: Quote): Promise<{ leadId: number; partnerId: number }> {
+export async function sendQuoteToOdoo(
+  quote: Quote
+): Promise<{ leadId: number; partnerId: number }> {
   const total = (quote.price || 0) * quote.quantity;
 
   const partnerId = await findOrCreatePartner(
-    quote.client_name, quote.client_email || '', quote.client_phone || ''
+    quote.client_name,
+    quote.client_email || '',
+    quote.client_phone || '',
   );
 
   const description = [
@@ -130,14 +113,31 @@ export async function sendQuoteToOdoo(quote: Quote): Promise<{ leadId: number; p
     partnerId,
     revenue:   total,
     description,
+    folio:     quote.folio,
   });
 
   return { leadId, partnerId };
 }
 
-// ── Probar la conexión vía proxy ─────────────────────────────
-export async function testOdooConnection(
-  url: string, db: string, email: string, password: string
-): Promise<{ uid: number; name: string }> {
-  return authenticateOdoo(url, db, email, password);
+// ── Probar conexión con Odoo ──────────────────────────────────
+export async function testOdooConnection(): Promise<{ ok: boolean; message: string }> {
+  try {
+    await callProxy('test', {});
+    return { ok: true, message: 'Conexión exitosa con Odoo' };
+  } catch (err) {
+    return { ok: false, message: (err as Error).message };
+  }
+}
+
+// Mantener compatibilidad con código existente
+export async function saveOdooCredentials(): Promise<void> {
+  console.info('Las credenciales de Odoo se configuran en variables de entorno de Vercel');
+}
+
+export async function getOdooCredentials(): Promise<OdooConfig | null> {
+  return null;
+}
+
+export async function authenticateOdoo(): Promise<{ uid: number; name: string }> {
+  throw new Error('No aplica — usa variables de entorno ODOO_UID y ODOO_API_KEY');
 }

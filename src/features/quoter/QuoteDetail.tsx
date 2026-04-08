@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import {
   ArrowLeft, Edit3, ChevronDown, Loader2, CheckCircle2, Clock,
   Send, TrendingUp, Award, XCircle, Ban, MessageSquare, Download,
-  FileText, Settings2, DollarSign, Sparkles, Mail, Zap,
+  FileText, DollarSign, Sparkles, Mail, Zap,
   Building2, Phone, CalendarDays, Package, Gauge, Layers,
   Ruler, Users, ChevronRight, AlertCircle
 } from 'lucide-react';
@@ -110,30 +110,18 @@ function PDFButton({ quote, sellerName, sellerTitle }: { quote: Quote; sellerNam
   );
 }
 
-// ── Botón Enviar a Odoo CRM (usa credenciales del vendedor) ─
+// ── Botón Enviar a Odoo CRM ──────────────────────────────────
+// Llama al API Route /api/odoo (Vercel serverless).
+// Sin configuración por usuario — credenciales en variables de entorno del servidor.
 function OdooButton({ quote }: { quote: Quote }) {
-  const [loading,  setLoading]  = useState(false);
-  const [status,   setStatus]   = useState<'idle' | 'ok' | 'error' | 'noconfig'>('idle');
-  const [msg,      setMsg]      = useState('');
-  const [showConfig, setShowConfig] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [status,  setStatus]  = useState<'idle' | 'ok' | 'error'>('idle');
+  const [msg,     setMsg]     = useState('');
 
   const sendToOdoo = async () => {
     setLoading(true); setStatus('idle'); setMsg('');
     try {
-      const { supabase }           = await import('../../services/supabase');
-      const { getOdooCredentials, sendQuoteToOdoo } = await import('../../services/odooService');
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Sin sesión activa');
-
-      const config = await getOdooCredentials(user.id);
-      if (!config) {
-        setStatus('noconfig');
-        setMsg('Configura tu conexión a Odoo primero');
-        setLoading(false);
-        return;
-      }
-
+      const { sendQuoteToOdoo } = await import('../../services/odooService');
       const { leadId } = await sendQuoteToOdoo(quote);
       setStatus('ok');
       setMsg(`✓ Oportunidad ${leadId} creada en Odoo CRM`);
@@ -145,50 +133,27 @@ function OdooButton({ quote }: { quote: Quote }) {
 
   return (
     <div className="flex flex-col gap-1">
-      {showConfig && (
-        <OdooConnectLazy onClose={() => setShowConfig(false)} />
-      )}
-      <div className="flex items-center gap-1.5">
-        <button onClick={sendToOdoo} disabled={loading || status === 'ok'}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wide transition-all active:scale-95 disabled:opacity-50"
-          style={{
-            background: status === 'ok' ? '#10b981' : '#7C3AED',
-            color: 'white',
-            fontFamily: "'Syne', sans-serif",
-            boxShadow: status === 'ok' ? 'none' : '0 4px 14px rgba(124,58,237,0.3)',
-          }}>
-          {loading
-            ? <><Loader2 size={13} className="animate-spin" /> Enviando...</>
-            : status === 'ok'
-            ? <><CheckCircle2 size={13} /> Enviado a Odoo</>
-            : <><Zap size={13} /> Enviar al CRM</>}
-        </button>
-        <button onClick={() => setShowConfig(true)} title="Configurar Odoo"
-          className="p-2 rounded-xl border border-[#7C3AED]/30 text-[#7C3AED] hover:bg-[#7C3AED]/10 transition-all"
-          style={{ fontSize: 14 }}>
-          ⚙
-        </button>
-      </div>
+      <button onClick={sendToOdoo} disabled={loading || status === 'ok'}
+        className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wide transition-all active:scale-95 disabled:opacity-50"
+        style={{
+          background: status === 'ok' ? '#10b981' : '#7C3AED',
+          color: 'white',
+          fontFamily: "'Syne', sans-serif",
+          boxShadow: status === 'ok' ? 'none' : '0 4px 14px rgba(124,58,237,0.3)',
+        }}>
+        {loading
+          ? <><Loader2 size={13} className="animate-spin" /> Enviando...</>
+          : status === 'ok'
+          ? <><CheckCircle2 size={13} /> Enviado a Odoo</>
+          : <><Zap size={13} /> Enviar al CRM</>}
+      </button>
       {msg && (
-        <p className={`text-[10px] font-medium ${status === 'ok' ? 'text-emerald-600' : status === 'noconfig' ? 'text-amber-600' : 'text-red-500'}`}>
+        <p className={`text-[10px] font-medium ${status === 'ok' ? 'text-emerald-600' : 'text-red-500'}`}>
           {msg}
-          {status === 'noconfig' && (
-            <button onClick={() => setShowConfig(true)} className="ml-1 underline font-bold">Configurar</button>
-          )}
         </p>
       )}
     </div>
   );
-}
-
-// Lazy import del modal para no cargar hasta que se necesite
-function OdooConnectLazy({ onClose }: { onClose: () => void }) {
-  const [Comp, setComp] = useState<React.ComponentType<{ onClose: () => void }> | null>(null);
-  useEffect(() => {
-    import('../../components/ui/OdooConnect').then(m => setComp(() => m.default));
-  }, []);
-  if (!Comp) return null;
-  return <Comp onClose={onClose} />;
 }
 
 
