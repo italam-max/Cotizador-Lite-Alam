@@ -21,25 +21,29 @@ async function callProxy(action: string, params: Record<string, unknown>): Promi
   return data.result;
 }
 
-async function callOdoo(model: string, method: string, args: unknown[], kwargs: Record<string, unknown> = {}): Promise<unknown> {
+async function callOdoo(
+  model: string, method: string,
+  args: unknown[], kwargs: Record<string, unknown> = {}
+): Promise<unknown> {
   return callProxy('call_kw', { model, method, args, kwargs });
 }
 
-async function findOrCreatePartner(name: string, email?: string, phone?: string): Promise<number> {
-  // Buscar partner existente
+async function findOrCreatePartner(
+  name: string, email?: string, phone?: string
+): Promise<number> {
   const found = await callOdoo('res.partner', 'search_read',
     [[['name', '=', name]]],
     { fields: ['id', 'name'], limit: 1 }
   ) as Array<{ id: number }>;
   if (found?.length > 0) return found[0].id;
 
-  // Crear nuevo — args[0] es el dict de valores
+  // Campos confirmados en DB: name, email, phone, company_type, is_company, ref
   return callOdoo('res.partner', 'create', [{
     name,
     email:        email || '',
     phone:        phone || '',
-    company_type: 'company',
     is_company:   true,
+    customer_rank: 1,
   }]) as Promise<number>;
 }
 
@@ -47,35 +51,47 @@ async function createCRMLead(params: {
   name: string; partnerId: number; revenue: number;
   description: string; folio: string;
 }): Promise<number> {
+  // Campos confirmados en DB: name, partner_id, expected_revenue,
+  // description, type, user_id, priority, stage_id, team_id, tag_ids
+  // ❌ NO existe: ref, planned_revenue, origin
   return callOdoo('crm.lead', 'create', [{
-    name:            params.name,
-    partner_id:      params.partnerId,
+    name:             params.name,
+    partner_id:       params.partnerId,
     expected_revenue: params.revenue,
-    description:     params.description,
-    type:            'opportunity',
-    user_id:         1,
-    ref:             params.folio,
+    description:      params.description,
+    type:             'opportunity',
+    user_id:          1,              // OdooBot como responsable
+    priority:         '0',           // normal
   }]) as Promise<number>;
 }
 
-export async function sendQuoteToOdoo(quote: Quote): Promise<{ leadId: number; partnerId: number }> {
+export async function sendQuoteToOdoo(
+  quote: Quote
+): Promise<{ leadId: number; partnerId: number }> {
   const total = (quote.price || 0) * quote.quantity;
 
   const partnerId = await findOrCreatePartner(
-    quote.client_name, quote.client_email || '', quote.client_phone || ''
+    quote.client_name,
+    quote.client_email || '',
+    quote.client_phone || '',
   );
 
   const description = [
-    `<b>Folio:</b> ${quote.folio}`,
-    `<b>Modelo:</b> ${quote.model} | ${quote.use_type}`,
-    `<b>Capacidad:</b> ${quote.capacity} kg / ${quote.persons} personas`,
-    `<b>Paradas:</b> ${quote.stops} | <b>Velocidad:</b> ${quote.speed} m/s`,
-    `<b>Total:</b> $${total.toLocaleString('es-MX')} ${quote.currency}`,
-  ].join('<br/>');
+    `Folio: ${quote.folio}`,
+    `Modelo: ${quote.model} | ${quote.use_type}`,
+    `Capacidad: ${quote.capacity} kg / ${quote.persons} personas`,
+    `Paradas: ${quote.stops} | Velocidad: ${quote.speed} m/s`,
+    `Recorrido: ${((quote.travel || 0) / 1000).toFixed(1)} m`,
+    `Cubo: ${quote.shaft_width} x ${quote.shaft_depth} mm`,
+    `Total: $${total.toLocaleString('es-MX')} ${quote.currency}`,
+  ].join('\n');
 
   const leadId = await createCRMLead({
-    name:      `[${quote.folio}] ${quote.model} — ${quote.client_name}`,
-    partnerId, revenue: total, description, folio: quote.folio,
+    name:      `[${quote.folio}] ${quote.model} - ${quote.client_name}`,
+    partnerId,
+    revenue:   total,
+    description,
+    folio:     quote.folio,
   });
 
   return { leadId, partnerId };
