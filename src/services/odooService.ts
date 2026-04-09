@@ -50,7 +50,7 @@ async function createCRMLead(params: {
   return callOdoo('crm.lead', 'create', [{
     name:            params.name,
     partner_id:      params.partnerId,
-    planned_revenue: params.revenue,
+    expected_revenue: params.revenue,
     description:     params.description,
     type:            'opportunity',
     user_id:         1,
