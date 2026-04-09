@@ -91,9 +91,9 @@ const SELECT   = INPUT + " appearance-none cursor-pointer";
 
 // ── Vista previa PDF (modal) ────────────────────────────────
 function PDFPreviewModal({
-  quote, sellerName, sellerTitle, onClose
+  quote, sellerName, sellerTitle, cabinImage, onClose
 }: {
-  quote: Quote; sellerName: string; sellerTitle: string; onClose: () => void;
+  quote: Quote; sellerName: string; sellerTitle: string; cabinImage?: string; onClose: () => void;
 }) {
   const [downloading, setDownloading] = useState(false);
   const [sending,     setSending]     = useState(false);
@@ -107,8 +107,18 @@ function PDFPreviewModal({
       const { pdf }              = await import('@react-pdf/renderer');
       const { QuotePDFDocument } = await import('../pdf/QuotePDF');
       const React = await import('react');
+      const { CABIN_WALLS, FLOOR_FINISHES, PLAFONOS } = await import('../../data/engineRules');
+      const wallItem   = CABIN_WALLS.find((w: any) => w.label === quote.cabin_finish);
+      const floorItem  = FLOOR_FINISHES.find((f: any) => f.label === quote.cabin_floor);
+      const plafonItem = PLAFONOS.find((p: any) => p.id === quote.cop_model);
+      const origin = window.location.origin;
+      const toAbs  = (path: string) => path ? `${origin}${path}` : '';
       const element = React.createElement(QuotePDFDocument as any, {
-        quote, seller: sellerName, sellerTitle
+        quote, seller: sellerName, sellerTitle,
+        cabinImage: cabinImage || undefined,
+        wallImg:   toAbs(wallItem?.img  || ''),
+        floorImg:  toAbs(floorItem?.img || ''),
+        plafonImg: toAbs(plafonItem?.img || ''),
       });
       const contentBlob = await pdf(element as any).toBlob();
       const { mergeAndDownload } = await import('../../services/pdfMerge');
@@ -379,6 +389,7 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
         quote={savedQuote}
         sellerName={sellerName}
         sellerTitle={sellerTitle}
+        cabinImage={cabinImage || undefined}
         onClose={() => { setSavedQuote(null); onSaved(); }}
       />
     )}

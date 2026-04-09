@@ -402,14 +402,24 @@ export function QuotePDFDocument({ quote: q, seller = 'Ejecutivo de Ventas', sel
               </View>
             </View>
             <View style={S.col}>
-              <Text style={S.secTitle}>SISTEMA DE CONTROL</Text>
-              <View style={{ borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 3, overflow: 'hidden', marginBottom: 10 }}>
-                <Spec label="Control"      value="ALAMEX 220V / 14A" />
-                <Spec label="Botonera COP" value="Punto Matriz" alt />
-                <Spec label="Botonera LOP" value="Punto Matriz" />
-                <Spec label="Diagnóstico"  value="Scanner multilenguaje" alt />
-                <Spec label="Nomenclatura" value={generateFloorNomenclature(q.stops)} />
-              </View>
+              {/* Imagen del configurador de cabina */}
+              {cabinImage ? (
+                <View style={{ alignItems: 'center', marginBottom: 10 }}>
+                  <Text style={[S.secTitle, { width: '100%' }]}>DISEÑO DE CABINA</Text>
+                  <Image src={cabinImage} style={{ width: 180, height: 220, objectFit: 'contain', borderRadius: 4 }} />
+                </View>
+              ) : (
+                <>
+                  <Text style={S.secTitle}>SISTEMA DE CONTROL</Text>
+                  <View style={{ borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 3, overflow: 'hidden', marginBottom: 10 }}>
+                    <Spec label="Control"      value="ALAMEX 220V / 14A" />
+                    <Spec label="Botonera COP" value="Punto Matriz" alt />
+                    <Spec label="Botonera LOP" value="Punto Matriz" />
+                    <Spec label="Diagnóstico"  value="Scanner multilenguaje" alt />
+                    <Spec label="Nomenclatura" value={generateFloorNomenclature(q.stops)} />
+                  </View>
+                </>
+              )}
               <View style={S.infoBoxGold}>
                 <Text style={S.infoTitle}>Ventajas del sistema ALAMEX</Text>
                 <Bullet text="Bajo consumo de energía eléctrica" />
