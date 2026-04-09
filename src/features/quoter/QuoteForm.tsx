@@ -28,6 +28,7 @@ import {
 } from '../../data/engineRules';
 import type { Quote } from '../../types';
 import { EMPTY_QUOTE } from '../../types';
+import PDFOptionsSection, { DEFAULT_PDF_OPTIONS, type PdfOptions } from '../../components/ui/PDFOptionsSection';
 
 interface Props {
   quote:       Quote | null;
@@ -233,6 +234,15 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
   const [warnings,   setWarnings]   = useState<{ field: string; msg: string }[]>([]);
   const [savedQuote, setSavedQuote] = useState<Quote | null>(null); // para modal PDF
   const [cabinImage,  setCabinImage]  = useState<string>('');           // imagen capturada del configurador
+  const [pdfOptions, setPdfOptions] = useState<PdfOptions>(() => {
+    if ((quote as any)?.pdf_options) {
+      try {
+        const raw = (quote as any).pdf_options;
+        return typeof raw === 'string' ? JSON.parse(raw) : raw;
+      } catch { return DEFAULT_PDF_OPTIONS; }
+    }
+    return DEFAULT_PDF_OPTIONS;
+  });
 
   useEffect(() => {
     if (!quote && !form.folio) {
@@ -353,6 +363,7 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
         ...form,
         status:      'Enviada' as const,
         cabin_model: cabinDesc, // guardamos la descripción generada
+        pdf_options: pdfOptions,
       };
       let saved: Quote;
       if (quote?.id) {
@@ -898,6 +909,9 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
                   </Field>
                 </div>
               </SectionCard>
+
+              {/* Opciones del PDF */}
+              <PDFOptionsSection value={pdfOptions} onChange={setPdfOptions} />
 
               {/* Ajuste 8: notas internas conservadas */}
               <SectionCard title="Notas internas" note="No aparece en el PDF del cliente">

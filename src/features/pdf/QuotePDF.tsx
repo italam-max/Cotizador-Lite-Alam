@@ -15,8 +15,7 @@ const GRAY  = '#555555';
 const LGRAY = '#F5F5F5';
 const BLK   = '#1A1A1A';
 
-// ── IMAGEN POR MODELO — base64 para compatibilidad browser ──
-// Mapa de rutas de imágenes de elevadores
+// ── IMAGEN POR MODELO ────────────────────────────────────────
 const ELEVATOR_PATHS: Record<string, string> = {
   'MRL-G':     '/pdf/elevator-mrl-g.png',
   'MRL-L':     '/pdf/elevator-mrl-l.png',
@@ -27,9 +26,6 @@ const ELEVATOR_PATHS: Record<string, string> = {
 const elevatorImage = (model: string): string =>
   ELEVATOR_PATHS[model] || '/pdf/elevator-mr.png';
 
-// Mapa de rutas de imágenes de catálogo
-const CATALOG_BASE = '/catalog';
-
 const MODEL_LABELS: Record<string, string> = {
   'MR':        'Con Cuarto de Máquinas (MR)',
   'MRL-L':     'Sin Cuarto de Máquinas — Chasis L (MRL-L)',
@@ -38,75 +34,84 @@ const MODEL_LABELS: Record<string, string> = {
   'Home Lift': 'Home Lift Residencial',
 };
 
+// ── TODAS LAS SEGURIDADES DISPONIBLES ───────────────────────
+export const TODAS_SEGURIDADES = [
+  'Sistema de paracaídas',
+  'Sensor de carga (báscula de sobrecarga)',
+  'Sensor de velocidad',
+  'Cortina de luz',
+  'Rescate automático en caso de corte de luz',
+  'Sistema anti-incendio / Alarma de incendio',
+  'Sensor sísmico',
+  'Amortiguadores',
+  'Botón de alarma',
+  'Nivelación automática',
+  'Apagado automático de luz de cabina',
+  'Ventilador de cabina',
+  'Scanner de error (Español + 5 idiomas)',
+  'Botoneras Punto Matriz (COP y LOP)',
+  'Protección de atascamiento y recalentamiento del motor',
+  'Puerta abierta con botón de piso',
+];
+
+// ── TODOS LOS EXTRAS DE DESCRIPCIÓN DISPONIBLES ─────────────
+export const TODOS_EXTRAS_DESC = [
+  'Pasamanos',
+  'Rescate Automático',
+  'Sensor sísmico',
+  'Sensor de carga',
+  'Cortina de luz',
+  'Alarma incendio',
+  'Voz en off',
+  'Ventilador',
+];
+
 // ── ESTILOS ──────────────────────────────────────────────────
 const S = StyleSheet.create({
   page: { backgroundColor: WHITE, padding: 0, fontFamily: 'Helvetica' },
-
-  // Franjas decorativas
   stripTop:  { position: 'absolute', top: 0, left: 0,   width: 55,  height: 8, backgroundColor: GOLD  },
   stripTop2: { position: 'absolute', top: 0, left: 55,  width: 120, height: 8, backgroundColor: NAVY  },
   stripBot:  { position: 'absolute', bottom: 0, left: 0,   width: 160, height: 8, backgroundColor: GOLD  },
   stripBot2: { position: 'absolute', bottom: 0, left: 160, width: 80,  height: 8, backgroundColor: NAVY  },
-
-  // Header interior
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 30, paddingVertical: 12,
     backgroundColor: WHITE, borderBottomWidth: 3, borderBottomColor: GOLD,
   },
-  headerLogo: { width: 110, height: 'auto' },
   headerRight: { alignItems: 'flex-end' },
   headerTitle: { fontSize: 8, color: NAVY, fontFamily: 'Helvetica-Bold', letterSpacing: 0.5 },
   headerSub:   { fontSize: 7, color: GRAY, marginTop: 1 },
-
   body: { paddingHorizontal: 30, paddingTop: 16, paddingBottom: 44 },
-
-  // Títulos
   secTitle: {
     fontSize: 11, fontFamily: 'Helvetica-Bold', color: NAVY,
     marginBottom: 8, marginTop: 12,
     paddingBottom: 4, borderBottomWidth: 1, borderBottomColor: GOLD,
   },
   secNum: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: NAVY, marginBottom: 8, marginTop: 10 },
-
-  // Tabla general
   tblHeader: { flexDirection: 'row', backgroundColor: NAVY, minHeight: 24, alignItems: 'center' },
   tblHCell:  { flex: 1, paddingHorizontal: 8, paddingVertical: 5, fontSize: 9, fontFamily: 'Helvetica-Bold', color: WHITE },
   tblRow:    { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#E0E0E0', minHeight: 20, alignItems: 'center' },
   tblAlt:    { backgroundColor: LGRAY },
   tblCell:   { flex: 1, paddingHorizontal: 8, paddingVertical: 5, fontSize: 9, color: BLK },
   tblBold:   { flex: 1, paddingHorizontal: 8, paddingVertical: 5, fontSize: 9, fontFamily: 'Helvetica-Bold', color: BLK },
-
-  // Tabla specs (clave / valor)
   specRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#EBEBEB', minHeight: 20, alignItems: 'center' },
   specKey: { width: '42%', paddingHorizontal: 8, paddingVertical: 5, fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: NAVY, borderRightWidth: 1, borderRightColor: '#EBEBEB' },
   specVal: { flex: 1, paddingHorizontal: 8, paddingVertical: 5, fontSize: 8.5, color: BLK },
-
-  // Info boxes
   infoBox:     { padding: 10, borderRadius: 4, marginBottom: 10, backgroundColor: '#EBF0FB', borderLeftWidth: 3, borderLeftColor: NAVY },
   infoBoxGold: { padding: 10, borderRadius: 4, marginBottom: 10, backgroundColor: '#FFFBEB', borderLeftWidth: 3, borderLeftColor: GOLD },
   infoTitle:   { fontSize: 9, fontFamily: 'Helvetica-Bold', color: NAVY, marginBottom: 3 },
   infoText:    { fontSize: 8.5, color: BLK, lineHeight: 1.5 },
-
-  // Bullets
   bulletRow:  { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4 },
   bulletDot:  { width: 5, height: 5, borderRadius: 2.5, backgroundColor: GOLD, marginTop: 3.5, marginRight: 6, flexShrink: 0 },
   bulletText: { fontSize: 8.5, color: BLK, flex: 1, lineHeight: 1.5 },
-
   para: { fontSize: 8.5, color: BLK, lineHeight: 1.5, marginBottom: 6 },
-
-  // Cols
   cols: { flexDirection: 'row', gap: 14, marginBottom: 8 },
   col:  { flex: 1 },
-
-  // Tabla condiciones
   condTable: { borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 3, overflow: 'hidden', marginBottom: 10 },
   condHead:  { flexDirection: 'row', backgroundColor: NAVY, minHeight: 22, alignItems: 'center' },
   condHCell: { flex: 1, paddingHorizontal: 8, paddingVertical: 5, fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: WHITE },
   condRow:   { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#E0E0E0', minHeight: 18, alignItems: 'flex-start' },
   condCell:  { flex: 1, paddingHorizontal: 8, paddingVertical: 4, fontSize: 8, color: BLK, lineHeight: 1.4 },
-
-  // Footer
   footer: {
     position: 'absolute', bottom: 0, left: 0, right: 0, height: 28,
     backgroundColor: NAVY, flexDirection: 'row', alignItems: 'center',
@@ -137,9 +142,9 @@ const Bullet = ({ text }: { text: string }) => (
 const IHeader = ({ folio, client, page }: { folio: string; client: string; page: number }) => (
   <View style={S.header}>
     <View style={{ flexDirection: 'column', justifyContent: 'center' }}>
-    <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold', color: '#1B3A6B', letterSpacing: 0.5 }}>ALAMEX</Text>
-    <Text style={{ fontSize: 7, color: '#555', letterSpacing: 0.3 }}>Elevadores</Text>
-  </View>
+      <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold', color: '#1B3A6B', letterSpacing: 0.5 }}>ALAMEX</Text>
+      <Text style={{ fontSize: 7, color: '#555', letterSpacing: 0.3 }}>Elevadores</Text>
+    </View>
     <View style={S.headerRight}>
       <Text style={S.headerTitle}>Elevadores Alamex · www.alam.mx</Text>
       <Text style={S.headerSub}>Ref: {folio}  ·  {client}  ·  Pág. {page}</Text>
@@ -155,37 +160,21 @@ const IFooter = ({ seller, title }: { seller: string; title: string }) => (
   </View>
 );
 
-const SEGURIDADES = [
-  'Sistema de paracaídas',
-  'Sensor de carga (báscula de sobrecarga)',
-  'Sensor de velocidad',
-  'Cortina de luz',
-  'Rescate automático en caso de corte de luz',
-  'Sistema anti-incendio / Alarma de incendio',
-  'Sensor sísmico',
-  'Amortiguadores',
-  'Botón de alarma',
-  'Nivelación automática',
-  'Apagado automático de luz de cabina',
-  'Ventilador de cabina',
-  'Scanner de error (Español + 5 idiomas)',
-  'Botoneras Punto Matriz (COP y LOP)',
-  'Protección de atascamiento y recalentamiento del motor',
-  'Puerta abierta con botón de piso',
-];
-
 // ── DOCUMENTO ────────────────────────────────────────────────
 interface Props {
   quote:        Quote;
   seller?:      string;
   sellerTitle?: string;
-  cabinImage?:  string;  // imagen generada por el configurador canvas
-  wallImg?:     string;  // imagen del acabado de paredes
-  floorImg?:    string;  // imagen del piso
-  plafonImg?:   string;  // imagen del plafón
+  cabinImage?:  string;
+  wallImg?:     string;
+  floorImg?:    string;
+  plafonImg?:   string;
 }
 
-export function QuotePDFDocument({ quote: q, seller = 'Ejecutivo de Ventas', sellerTitle = 'Ventas', cabinImage, wallImg, floorImg, plafonImg }: Props) {
+export function QuotePDFDocument({
+  quote: q, seller = 'Ejecutivo de Ventas', sellerTitle = 'Ventas',
+  cabinImage, wallImg, floorImg, plafonImg
+}: Props) {
   const fmt   = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
   const today = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
   const isMRL = q.model.includes('MRL');
@@ -197,6 +186,7 @@ export function QuotePDFDocument({ quote: q, seller = 'Ejecutivo de Ventas', sel
   const totalConIVA = total * 1.16;
   const machineRoom = isMR ? 'Con Cuarto de Máquinas' : isHyd ? 'N/A (Hidráulico)' : 'Sin Cuarto de Máquinas';
   const modelLabel  = MODEL_LABELS[q.model] || q.model;
+
   const terms = q.commercial_terms || {
     paymentMethod: '50% Anticipo / 25% Embarque / 20% Entrega / 05% Puesta en marcha',
     deliveryTime:  '6 meses a partir de firma de contrato y anticipo',
@@ -205,15 +195,27 @@ export function QuotePDFDocument({ quote: q, seller = 'Ejecutivo de Ventas', sel
     generalConditions: 'Obra civil por cuenta del cliente.',
   };
 
+  // ── Opciones PDF con defaults (todo activo si no hay config) ─
+  const opts = q.pdf_options ?? {};
+  const seguridadesActivas: string[] = opts.seguridades ?? TODAS_SEGURIDADES;
+  const extrasDescActivos: string[]  = opts.extras_descripcion ?? TODOS_EXTRAS_DESC;
+  const mostrarNormativa             = opts.mostrar_normativa   ?? true;
+  const mostrarCalidad               = opts.mostrar_calidad     ?? true;
+  const mostrarVentajas              = opts.mostrar_ventajas    ?? true;
+
+  // Descripción de la cotización con extras opcionales
+  const extrasStr = extrasDescActivos.length > 0
+    ? ' / ' + extrasDescActivos.join(' / ')
+    : '';
+
   return (
     <Document title={`Propuesta ${q.folio} — ${q.client_name}`} author="Elevadores Alamex">
 
-      {/* ══ PÁG 1 — COTIZACIÓN ══ (la portada se fusiona en descarga desde /pdf/portada-alamex.pdf) */}
+      {/* ══ PÁG 2 — COTIZACIÓN ══ */}
       <Page size="LETTER" style={S.page}>
         <View style={S.stripTop} /><View style={S.stripTop2} />
         <IHeader folio={q.folio} client={q.client_name} page={2} />
         <View style={S.body}>
-
           <Text style={{ fontSize: 9.5, color: NAVY, fontFamily: 'Helvetica-Bold', marginBottom: 4 }}>
             Estimado/a {q.client_name}
           </Text>
@@ -223,7 +225,6 @@ export function QuotePDFDocument({ quote: q, seller = 'Ejecutivo de Ventas', sel
             y tomando como base la información suministrada, hacemos llegar la propuesta económica
             para el suministro e instalación del (los) equipo(s) con las características descritas.
           </Text>
-
           <View style={{ flexDirection: 'row', gap: 16, marginBottom: 12 }}>
             <View style={{ flexDirection: 'row', gap: 4 }}>
               <Text style={{ fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: NAVY }}>Referencia:</Text>
@@ -243,7 +244,6 @@ export function QuotePDFDocument({ quote: q, seller = 'Ejecutivo de Ventas', sel
 
           <Text style={S.secNum}>1.  COTIZACIÓN DE PROYECTO</Text>
 
-          {/* Tabla precio */}
           <View style={{ borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
             <View style={S.tblHeader}>
               <Text style={[S.tblHCell, { flex: 3 }]}>Descripción</Text>
@@ -255,11 +255,10 @@ export function QuotePDFDocument({ quote: q, seller = 'Ejecutivo de Ventas', sel
                 <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: BLK, marginBottom: 2 }}>
                   {q.quantity} Elevador{q.quantity > 1 ? 'es' : ''} de {(q.use_type || 'Pasajeros').toUpperCase()}{' '}
                   {q.model} / {q.stops} niveles / {q.capacity} Kg / {q.persons} personas
-                  {q.cabin_floor ? ` / piso en ${q.cabin_floor}` : ''}
-                  {q.cabin_finish ? ` / Cabina ${q.cabin_finish}` : ''}
-                  {q.door_type ? ` / Puertas ${q.door_type}` : ''}
-                  {' '}/ Pasamanos / Rescate Automático / Sensor sísmico / Sensor de carga
-                  {' '}/ Cortina de luz / Alarma incendio / Voz en off / Ventilador
+                  {q.cabin_floor  ? ` / piso en ${q.cabin_floor}`  : ''}
+                  {q.cabin_finish ? ` / Cabina ${q.cabin_finish}`  : ''}
+                  {q.door_type    ? ` / Puertas ${q.door_type}`    : ''}
+                  {extrasStr}
                 </Text>
               </View>
               <Text style={[S.tblBold, { textAlign: 'right' }]}>{fmt.format(total)} {q.currency || 'MXN'}</Text>
@@ -297,7 +296,6 @@ export function QuotePDFDocument({ quote: q, seller = 'Ejecutivo de Ventas', sel
         <View style={S.body}>
           <Text style={S.secTitle}>ESPECIFICACIONES TÉCNICAS DEL SISTEMA DE ELEVACIÓN</Text>
           <View style={{ flexDirection: 'row', gap: 16 }}>
-            {/* Tabla specs */}
             <View style={{ flex: 1 }}>
               <View style={{ borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 3, overflow: 'hidden' }}>
                 <Spec label="TIPO"                  value={q.model} />
@@ -331,7 +329,6 @@ export function QuotePDFDocument({ quote: q, seller = 'Ejecutivo de Ventas', sel
                 <Spec label="NORMATIVA"             value={q.norm || 'EN 81-20'} />
               </View>
             </View>
-            {/* Imagen del modelo */}
             <View style={{ width: 135, alignItems: 'center', paddingTop: 20 }}>
               <Image src={elevatorImage(q.model)} style={{ width: 125, height: 255, objectFit: 'contain' }} />
               <Text style={{ fontSize: 7.5, color: NAVY, fontFamily: 'Helvetica-Bold', marginTop: 6, textAlign: 'center' }}>
@@ -359,17 +356,25 @@ export function QuotePDFDocument({ quote: q, seller = 'Ejecutivo de Ventas', sel
                 <Spec label="Dimensiones"       value={`${q.door_width} mm × ${q.door_height} mm`} alt />
                 <Spec label="Acabado"           value={q.use_type === 'Pasajeros' ? 'Acero Inoxidable (INOX)' : 'Pintura Epóxica Industrial'} />
               </View>
-              <View style={S.infoBox}>
-                <Text style={S.infoTitle}>Normativa aplicable</Text>
-                <Text style={S.infoText}>
-                  Nuestros equipos cumplen con la Normativa{' '}
-                  <Text style={{ fontFamily: 'Helvetica-Bold' }}>{q.norm || 'EN 81-20'}</Text> europea y NOM-53 mexicana.
-                </Text>
-              </View>
+              {/* Normativa — opcional */}
+              {mostrarNormativa && (
+                <View style={S.infoBox}>
+                  <Text style={S.infoTitle}>Normativa aplicable</Text>
+                  <Text style={S.infoText}>
+                    Nuestros equipos cumplen con la Normativa{' '}
+                    <Text style={{ fontFamily: 'Helvetica-Bold' }}>{q.norm || 'EN 81-20'}</Text> europea y NOM-53 mexicana.
+                  </Text>
+                </View>
+              )}
             </View>
             <View style={S.col}>
-              <Text style={S.secTitle}>SEGURIDADES INCLUIDAS</Text>
-              {SEGURIDADES.map((s, i) => <Bullet key={i} text={s} />)}
+              {/* Seguridades — solo las activas */}
+              {seguridadesActivas.length > 0 && (
+                <View>
+                  <Text style={S.secTitle}>SEGURIDADES INCLUIDAS</Text>
+                  {seguridadesActivas.map((s, i) => <Bullet key={i} text={s} />)}
+                </View>
+              )}
             </View>
           </View>
         </View>
@@ -393,13 +398,16 @@ export function QuotePDFDocument({ quote: q, seller = 'Ejecutivo de Ventas', sel
                 <Spec label="Plafón"      value={q.cop_model || 'LV-29'} />
                 <Spec label="Tipo de uso" value={q.use_type || 'Pasajeros'} alt />
               </View>
-              <View style={S.infoBox}>
-                <Text style={S.infoTitle}>Calidad y estándares</Text>
-                <Text style={S.infoText}>
-                  Cabinas construidas bajo los estándares NOM-53 y EN-81 para uso habitacional,
-                  residencial e industrial con alto rendimiento. Materiales de primera calidad.
-                </Text>
-              </View>
+              {/* Calidad y estándares — opcional */}
+              {mostrarCalidad && (
+                <View style={S.infoBox}>
+                  <Text style={S.infoTitle}>Calidad y estándares</Text>
+                  <Text style={S.infoText}>
+                    Cabinas construidas bajo los estándares NOM-53 y EN-81 para uso habitacional,
+                    residencial e industrial con alto rendimiento. Materiales de primera calidad.
+                  </Text>
+                </View>
+              )}
             </View>
             <View style={S.col}>
               <Text style={S.secTitle}>SISTEMA DE CONTROL</Text>
@@ -410,13 +418,16 @@ export function QuotePDFDocument({ quote: q, seller = 'Ejecutivo de Ventas', sel
                 <Spec label="Diagnóstico"  value="Scanner multilenguaje" alt />
                 <Spec label="Nomenclatura" value={generateFloorNomenclature(q.stops)} />
               </View>
-              <View style={S.infoBoxGold}>
-                <Text style={S.infoTitle}>Ventajas del sistema ALAMEX</Text>
-                <Bullet text="Bajo consumo de energía eléctrica" />
-                <Bullet text="Mayor confort en arranque y frenado" />
-                <Bullet text="Sistema de rescate automático integrado" />
-                <Bullet text="Diagnóstico en español y 5 idiomas más" />
-              </View>
+              {/* Ventajas ALAMEX — opcional */}
+              {mostrarVentajas && (
+                <View style={S.infoBoxGold}>
+                  <Text style={S.infoTitle}>Ventajas del sistema ALAMEX</Text>
+                  <Bullet text="Bajo consumo de energía eléctrica" />
+                  <Bullet text="Mayor confort en arranque y frenado" />
+                  <Bullet text="Sistema de rescate automático integrado" />
+                  <Bullet text="Diagnóstico en español y 5 idiomas más" />
+                </View>
+              )}
             </View>
           </View>
         </View>
@@ -429,12 +440,10 @@ export function QuotePDFDocument({ quote: q, seller = 'Ejecutivo de Ventas', sel
         <View style={S.stripTop} /><View style={S.stripTop2} />
         <IHeader folio={q.folio} client={q.client_name} page={6} />
         <View style={S.body}>
-
           <Text style={S.secNum}>1.  TIEMPO DE ENTREGA</Text>
           <View style={S.infoBox}>
             <Text style={S.infoText}>{terms.deliveryTime}</Text>
           </View>
-
           <Text style={S.secNum}>2.  GARANTÍA</Text>
           <View style={S.infoBox}>
             <Text style={S.infoText}>
@@ -443,7 +452,6 @@ export function QuotePDFDocument({ quote: q, seller = 'Ejecutivo de Ventas', sel
               conservar la garantía integral del equipo.
             </Text>
           </View>
-
           <Text style={S.secNum}>3.  MANTENIMIENTO GRATUITO</Text>
           <View style={S.infoBox}>
             <Text style={S.infoText}>
@@ -451,7 +459,6 @@ export function QuotePDFDocument({ quote: q, seller = 'Ejecutivo de Ventas', sel
               entrega del equipo, en horario de Lunes a Viernes de 9:00 am a 5:00 pm.
             </Text>
           </View>
-
           <Text style={S.secNum}>4.  CONDICIONES GENERALES</Text>
           <View style={S.infoBox}>
             <Text style={S.infoText}>
@@ -461,7 +468,6 @@ export function QuotePDFDocument({ quote: q, seller = 'Ejecutivo de Ventas', sel
               dificultades de importación, etc.{'\n'}{terms.generalConditions}
             </Text>
           </View>
-
           <Text style={S.secNum}>5.  FORMAS DE PAGO</Text>
           <View style={S.condTable}>
             <View style={S.condHead}>
@@ -480,14 +486,12 @@ export function QuotePDFDocument({ quote: q, seller = 'Ejecutivo de Ventas', sel
               </View>
             ))}
           </View>
-
           <Text style={S.secNum}>6.  VALIDEZ DE LA PROPUESTA</Text>
           <View style={S.infoBoxGold}>
             <Text style={{ fontSize: 9, color: BLK, fontFamily: 'Helvetica-Bold' }}>
               {terms.validity || '15 días naturales'}
             </Text>
           </View>
-
           <View style={{ marginTop: 18, alignItems: 'flex-end' }}>
             <Text style={{ fontSize: 9, color: GRAY, marginBottom: 3 }}>Atentamente,</Text>
             <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: NAVY }}>{seller}</Text>

@@ -67,6 +67,7 @@ export interface Quote {
   currency:         Currency;
   internal_notes:   string | null;
   commercial_terms: CommercialTerms | null;
+  pdf_options?: Record<string, any> | null;
 }
 
 export interface QuoteHistory {
