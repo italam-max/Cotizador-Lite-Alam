@@ -16,12 +16,14 @@ import type { Quote, QuoteHistory, QuoteStatus } from '../../types';
 import { autoRails, autoTractionLabel, generateFloorNomenclature } from '../../data/engineRules';
 
 interface Props {
-  quote:           Quote;
-  sellerName:      string;
-  sellerTitle:     string;
-  onBack:          () => void;
-  onEdit:          () => void;
-  onStatusChanged: () => void;
+  quote:            Quote;
+  sellerName:       string;
+  sellerTitle:      string;
+  onBack:           () => void;
+  onEdit:           () => void;
+  onStatusChanged:  () => void;
+  onToastSuccess?:  (msg: string) => void;
+  onToastError?:    (msg: string) => void;
 }
 
 const STATUS_CFG: Record<QuoteStatus, { label: string; cls: string; icon: any; dot: string; bg: string }> = {
@@ -265,7 +267,7 @@ function ZohoConnectLazy({ onClose }: { onClose: () => void }) {
 // ══════════════════════════════════════════════════════════════
 // COMPONENTE PRINCIPAL
 // ══════════════════════════════════════════════════════════════
-export default function QuoteDetail({ quote, sellerName, sellerTitle, onBack, onEdit, onStatusChanged }: Props) {
+export default function QuoteDetail({ quote, sellerName, sellerTitle, onBack, onEdit, onStatusChanged, onToastSuccess, onToastError }: Props) {
   const [current,  setCurrent]  = useState<Quote>(quote);
   const [history,  setHistory]  = useState<QuoteHistory[]>([]);
   const [loadingH, setLoadingH] = useState(true);
@@ -291,7 +293,8 @@ export default function QuoteDetail({ quote, sellerName, sellerTitle, onBack, on
       setCurrent(updated);
       setHistory(await QuotesService.getHistory(current.id));
       onStatusChanged();
-    } catch (e: any) { alert('Error: ' + e?.message); }
+      onToastSuccess?.(`Estado actualizado a "${pending}".`);
+    } catch (e: any) { onToastError?.('Error al cambiar estado: ' + (e?.message ?? 'Error desconocido')); }
     finally { setChanging(false); setPending(null); setNote(''); }
   };
 

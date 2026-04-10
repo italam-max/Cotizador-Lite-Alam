@@ -2,7 +2,7 @@
 // Estilo 1:1 del original — header navy, sidebar oscuro con secciones,
 // fondo beige #F9F7F2, arabesque, ambient light
 import { type ReactNode } from 'react';
-import { LayoutDashboard, Plus, Kanban, LogOut, User, Shield, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Plus, Kanban, LogOut, User, Shield, ChevronRight, Users } from 'lucide-react';
 import type { View } from '../../App';
 
 interface Props {
@@ -17,16 +17,6 @@ interface Props {
   children:     ReactNode;
 }
 
-const NAV_SECTIONS = [
-  {
-    label: 'Principal',
-    items: [
-      { id: 'dashboard' as View, icon: LayoutDashboard, label: 'Panel de Control' },
-      { id: 'pipeline'  as View, icon: Kanban,          label: 'Seguimiento'      },
-    ],
-  },
-];
-
 export default function AppShell({
   displayName, displayTitle, avatarUrl, isAdmin,
   onLogout, currentView, onNavigate, onNewQuote, children,
@@ -36,10 +26,27 @@ export default function AppShell({
   const initial     = safeName.charAt(0).toUpperCase();
   const isQuoteView = currentView.includes('quote') || currentView === 'detail';
 
+  const NAV_SECTIONS = [
+    {
+      label: 'Principal',
+      items: [
+        { id: 'dashboard' as View, icon: LayoutDashboard, label: 'Panel de Control' },
+        { id: 'pipeline'  as View, icon: Kanban,          label: 'Seguimiento'      },
+      ],
+    },
+    {
+      label: 'Cuenta',
+      items: [
+        { id: 'profile' as View, icon: User,   label: 'Mi Perfil' },
+        ...(isAdmin ? [{ id: 'users' as View, icon: Users, label: 'Usuarios' }] : []),
+      ],
+    },
+  ];
+
   return (
     <div className="h-full flex flex-col" style={{ background: '#F9F7F2' }}>
 
-      {/* ══ HEADER — idéntico al original ══ */}
+      {/* ══ HEADER ══ */}
       <header className="h-28 shrink-0 flex items-center px-8 relative z-40 overflow-hidden"
         style={{
           background: 'linear-gradient(to right, #051338, #0A2463, #051338)',
@@ -47,7 +54,6 @@ export default function AppShell({
           boxShadow: '0 4px 30px rgba(0,0,0,0.5)',
         }}>
 
-        {/* Arabesque en header */}
         <div className="absolute inset-0 arabesque-pattern pointer-events-none opacity-20" />
 
         {/* LEFT: Logo + ALAMEX */}
@@ -85,24 +91,41 @@ export default function AppShell({
         {/* RIGHT: Admin + user + logout */}
         <div className="ml-auto flex items-center gap-6 z-10">
           {isAdmin && (
-            <button className="hidden md:flex items-center gap-2 bg-[#D4AF37]/10 border border-[#D4AF37]/40 text-[#D4AF37] px-4 py-2 rounded-full text-xs font-bold hover:bg-[#D4AF37] hover:text-[#0A2463] transition-all shadow-[0_0_15px_rgba(212,175,55,0.15)]">
-              <Shield size={14} /> Admin
+            <button
+              onClick={() => onNavigate('users')}
+              className={`hidden md:flex items-center gap-2 border px-4 py-2 rounded-full text-xs font-bold transition-all shadow-[0_0_15px_rgba(212,175,55,0.15)]
+                ${currentView === 'users'
+                  ? 'bg-[#D4AF37] text-[#0A2463] border-[#D4AF37]'
+                  : 'bg-[#D4AF37]/10 border-[#D4AF37]/40 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-[#0A2463]'
+                }`}
+            >
+              <Shield size={14} /> Usuarios
             </button>
           )}
           <div className="flex items-center gap-4 pl-6 border-l border-white/10">
-            <div className="text-right hidden md:block cursor-pointer" onClick={() => {}}>
-              <p className="text-white font-bold text-sm leading-tight">{safeName || 'Usuario'}</p>
+            {/* Nombre → navega a perfil */}
+            <button
+              onClick={() => onNavigate('profile')}
+              className="text-right hidden md:block group"
+            >
+              <p className="text-white font-bold text-sm leading-tight group-hover:text-[#D4AF37] transition-colors">
+                {safeName || 'Usuario'}
+              </p>
               <p className="text-[#D4AF37] text-[10px] font-medium uppercase tracking-wider opacity-80">
                 {displayTitle || 'Ejecutivo'}
               </p>
-            </div>
-            <div className="relative w-11 h-11 rounded-full bg-black/30 border border-[#D4AF37]/50 flex items-center justify-center text-[#D4AF37] overflow-hidden backdrop-blur-sm shadow-inner">
+            </button>
+            {/* Avatar → navega a perfil */}
+            <button
+              onClick={() => onNavigate('profile')}
+              className="relative w-11 h-11 rounded-full bg-black/30 border border-[#D4AF37]/50 flex items-center justify-center text-[#D4AF37] overflow-hidden backdrop-blur-sm shadow-inner hover:border-[#D4AF37] hover:shadow-[0_0_12px_rgba(212,175,55,0.3)] transition-all"
+            >
               {avatarUrl
                 ? <img src={avatarUrl} className="w-full h-full object-cover" alt="" />
                 : <span className="text-lg font-black">{initial || <User size={16} />}</span>
               }
-            </div>
-            <button onClick={onLogout} className="text-white/40 hover:text-red-400 transition-colors p-2 hover:bg-white/5 rounded-full" title="Salir">
+            </button>
+            <button onClick={onLogout} className="text-white/40 hover:text-red-400 transition-colors p-2 hover:bg-white/5 rounded-full" title="Cerrar sesión">
               <LogOut size={20} />
             </button>
           </div>
@@ -112,11 +135,10 @@ export default function AppShell({
       {/* ══ BODY ══ */}
       <div className="flex-1 flex overflow-hidden">
 
-        {/* ── SIDEBAR — idéntico al original ── */}
+        {/* ── SIDEBAR ── */}
         <aside className="w-[220px] shrink-0 flex flex-col relative overflow-hidden"
           style={{ background: 'linear-gradient(180deg, #0A1830 0%, #060E1C 100%)', borderRight: '1px solid rgba(212,175,55,0.1)' }}>
 
-          {/* Arabesque en sidebar */}
           <div className="absolute inset-0 arabesque-pattern opacity-10 pointer-events-none" />
 
           {/* Botón NUEVA */}

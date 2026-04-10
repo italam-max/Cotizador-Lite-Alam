@@ -50,6 +50,11 @@ export function useAuth() {
     await supabase.auth.signOut();
   }, []);
 
+  const refreshProfile = useCallback(async () => {
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (currentUser) await loadProfile(currentUser.id);
+  }, [loadProfile]);
+
   return {
     user,
     profile,
@@ -57,5 +62,6 @@ export function useAuth() {
     isLoggedIn: !!user,
     login,
     logout,
+    refreshProfile,
   };
 }

@@ -21,7 +21,7 @@ export const EMPTY_QUOTE: FormQuote = {
   cabin_floor: 'Granito', cop_model: 'Display Inteligente', norm: 'EN 81-20',
   price: 0, currency: 'MXN', internal_notes: '',
   commercial_terms: {
-    paymentMethod: '50% Anticipo — 40% Contra Embarque — 10% Contra Entrega',
+    paymentMethod: '50% Anticipo a la firma del Contrato\n25% Al aviso de embarque\n20% Al aviso de entrega del equipo en obra\n05% Al aviso de entrega en funcionamiento',
     deliveryTime: 'A confirmar tras anticipo',
     warranty: '12 meses en partes y mano de obra',
     validity: '30 días naturales', currency: 'MXN',

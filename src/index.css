@@ -215,6 +215,13 @@ body {
 }
 .animate-bounce-in { animation: bounceIn 0.35s ease-out both; }
 
+/* Slide-in para toasts */
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(60px) scale(0.95); }
+  to   { opacity: 1; transform: translateX(0)    scale(1);    }
+}
+.animate-slide-in { animation: slideIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
 /* Status badge colors originales */
 .status-borrador    { background: rgba(148,163,184,0.15); color: #475569; border: 1px solid rgba(148,163,184,0.3); }
 .status-enviada     { background: rgba(59,130,246,0.1);   color: #1d4ed8; border: 1px solid rgba(59,130,246,0.25); }

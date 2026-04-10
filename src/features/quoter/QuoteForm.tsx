@@ -31,11 +31,13 @@ import { EMPTY_QUOTE } from '../../types';
 import PDFOptionsSection, { DEFAULT_PDF_OPTIONS, type PdfOptions } from '../../components/ui/PDFOptionsSection';
 
 interface Props {
-  quote:       Quote | null;
-  sellerName:  string;
-  sellerTitle: string;
-  onSaved:     () => void;
-  onCancel:    () => void;
+  quote:          Quote | null;
+  sellerName:     string;
+  sellerTitle:    string;
+  onSaved:        () => void;
+  onCancel:       () => void;
+  onToastSuccess?: (msg: string) => void;
+  onToastError?:   (msg: string) => void;
 }
 
 const STEPS = [
@@ -92,9 +94,11 @@ const SELECT   = INPUT + " appearance-none cursor-pointer";
 
 // ── Vista previa PDF (modal) ────────────────────────────────
 function PDFPreviewModal({
-  quote, sellerName, sellerTitle, onClose
+  quote, sellerName, sellerTitle, onClose, onToastError, cabinImage
 }: {
   quote: Quote; sellerName: string; sellerTitle: string; onClose: () => void;
+  onToastError?: (msg: string) => void;
+  cabinImage?: string;
 }) {
   const [downloading, setDownloading] = useState(false);
   const [sending,     setSending]     = useState(false);
@@ -109,7 +113,8 @@ function PDFPreviewModal({
       const { QuotePDFDocument } = await import('../pdf/QuotePDF');
       const React = await import('react');
       const element = React.createElement(QuotePDFDocument as any, {
-        quote, seller: sellerName, sellerTitle
+        quote, seller: sellerName, sellerTitle,
+        cabinImage: cabinImage || undefined,
       });
       const contentBlob = await pdf(element as any).toBlob();
       const { mergeAndDownload } = await import('../../services/pdfMerge');
@@ -117,12 +122,12 @@ function PDFPreviewModal({
       await mergeAndDownload(contentBlob, quote.folio, quote.client_name, filename);
     } catch (e: any) {
       console.error(e);
-      alert(e?.message || 'Error al generar PDF');
+      onToastError?.(e?.message || 'Error al generar el PDF. Intenta de nuevo.');
     } finally { setDownloading(false); }
   };
 
   const handleSendEmail = async () => {
-    if (!quote.client_email) { alert('Esta cotización no tiene email de cliente registrado.'); return; }
+    if (!quote.client_email) { onToastError?.('Esta cotización no tiene correo de cliente registrado.'); return; }
     setSending(true);
     // Por ahora abre el cliente de correo con mailto
     // En producción aquí iría la llamada al backend de email
@@ -226,7 +231,7 @@ function PDFPreviewModal({
 // ══════════════════════════════════════════════════════════
 // COMPONENTE PRINCIPAL
 // ══════════════════════════════════════════════════════════
-export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onCancel }: Props) {
+export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onCancel, onToastSuccess, onToastError }: Props) {
   const [step,       setStep]       = useState(1);
   const [form,       setForm]       = useState<FormData>(() => (quote ? { ...EMPTY_QUOTE, ...quote } : { ...EMPTY_QUOTE, owner_id: '' }) as FormData);
   const [saving,     setSaving]     = useState(false);
@@ -332,10 +337,11 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
     setWarnings([...w, ...extraWarnings]);
   }, [form]);
 
-  const hasError = (f: string) => errors.some(e => e.field === f);
+  const hasError   = (f: string) => errors.some(e => e.field === f);
   const hasDimWarn = (f: string) => warnings.some(w => w.field === f && w.msg.includes('debajo'));
-  const ic = (f: string) => hasError(f) ? INPUT_ERR : hasDimWarn(f) ? INPUT_WARN : INPUT;
-  const sc = (f: string) => hasError(f) ? INPUT_ERR + ' cursor-pointer' : hasDimWarn(f) ? INPUT_WARN + ' cursor-pointer appearance-none' : SELECT;
+  const hasWarn    = (f: string) => warnings.some(w => w.field === f);
+  const ic = (f: string) => hasError(f) ? INPUT_ERR : (hasDimWarn(f) || hasWarn(f)) ? INPUT_WARN : INPUT;
+  const sc = (f: string) => hasError(f) ? INPUT_ERR + ' cursor-pointer' : (hasDimWarn(f) || hasWarn(f)) ? INPUT_WARN + ' cursor-pointer appearance-none' : SELECT;
 
   const allowedModels = getAllowedModels(form.capacity, form.stops, form.travel || (form.stops - 1) * 3000);
   const allowedSpeeds = getAllowedSpeeds(form.model, form.capacity, form.stops);
@@ -374,7 +380,7 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
       // Ajuste 9: mostrar modal PDF
       setSavedQuote(saved);
     } catch (e: any) {
-      alert('Error al guardar: ' + (e?.message ?? 'Error desconocido'));
+      onToastError?.('Error al guardar: ' + (e?.message ?? 'Error desconocido'));
     } finally { setSaving(false); }
   };
 
@@ -390,6 +396,8 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
         quote={savedQuote}
         sellerName={sellerName}
         sellerTitle={sellerTitle}
+        cabinImage={cabinImage || undefined}
+        onToastError={onToastError}
         onClose={() => { setSavedQuote(null); onSaved(); }}
       />
     )}
@@ -804,6 +812,12 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
                   </div>
                 </div>
               </SectionCard>
+
+              {/* ── ACCESORIOS OPCIONALES — antes "Opciones del PDF" ── */}
+              <SectionCard title="Accesorios opcionales" note="Define qué incluir en la propuesta del cliente">
+                <PDFOptionsSection value={pdfOptions} onChange={setPdfOptions} />
+              </SectionCard>
+
             </div>
           )}
 
@@ -843,7 +857,7 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
                       <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-[#D4AF37] text-base">$</span>
                         <input type="number" min="0" step="1000"
-                          className={INPUT + ' pl-8 text-lg font-black text-[#0A2463]'}
+                          className={ic('price') + ' pl-8 text-lg font-black text-[#0A2463]'}
                           value={form.price || ''} onChange={e => update({ price: Number(e.target.value) })}
                           placeholder="0" />
                       </div>
@@ -890,17 +904,28 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
                       onChange={e => update({ commercial_terms: { ...form.commercial_terms!, warranty: e.target.value } })}
                       placeholder="3 años a partir de la entrega del equipo" />
                   </Field>
-                  <Field label="Formas de pago (equipo)">
-                    <textarea rows={2} className={INPUT + ' resize-none text-xs'}
-                      value={form.commercial_terms?.paymentMethod || ''}
-                      onChange={e => update({ commercial_terms: { ...form.commercial_terms!, paymentMethod: e.target.value } })}
-                      placeholder="50% Anticipo / 25% Embarque / 20% Entrega / 05% Puesta en marcha" />
-                  </Field>
                   <Field label="Validez de la propuesta">
                     <input className={INPUT} value={form.commercial_terms?.validity || ''}
                       onChange={e => update({ commercial_terms: { ...form.commercial_terms!, validity: e.target.value } })}
                       placeholder="15 días naturales" />
                   </Field>
+
+                  {/* ── Calendario de pagos — editable ── */}
+                  <Field label="Calendario de pagos" hint="Una línea por concepto — aparece en PDF">
+                    <textarea
+                      rows={5}
+                      className={INPUT + ' resize-none text-xs font-mono leading-relaxed'}
+                      value={
+                        form.commercial_terms?.paymentMethod ||
+                        '50% Anticipo a la firma del Contrato\n25% Al aviso de embarque\n20% Al aviso de entrega del equipo en obra\n05% Al aviso de entrega en funcionamiento'
+                      }
+                      onChange={e => update({ commercial_terms: { ...form.commercial_terms!, paymentMethod: e.target.value } })}
+                      placeholder={
+                        '50% Anticipo a la firma del Contrato\n25% Al aviso de embarque\n20% Al aviso de entrega del equipo en obra\n05% Al aviso de entrega en funcionamiento'
+                      }
+                    />
+                  </Field>
+
                   <Field label="Condiciones generales adicionales">
                     <textarea rows={2} className={INPUT + ' resize-none text-xs'}
                       value={form.commercial_terms?.generalConditions || ''}
@@ -909,9 +934,6 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
                   </Field>
                 </div>
               </SectionCard>
-
-              {/* Opciones del PDF */}
-              <PDFOptionsSection value={pdfOptions} onChange={setPdfOptions} />
 
               {/* Ajuste 8: notas internas conservadas */}
               <SectionCard title="Notas internas" note="No aparece en el PDF del cliente">
