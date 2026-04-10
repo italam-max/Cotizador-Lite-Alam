@@ -188,61 +188,6 @@ export function CabinSheet({ cabinModel, finish, floor, plafon, selected, onSele
 }
 
 // ══════════════════════════════════════════════════════════════
-// LIGHTBOX GENÉRICO — para acabados, pisos, plafones
-// ══════════════════════════════════════════════════════════════
-interface LightboxProps {
-  item:     CatalogItem;
-  selected: boolean;
-  onSelect: () => void;
-  onClose:  () => void;
-}
-
-function Lightbox({ item, selected, onSelect, onClose }: LightboxProps) {
-  return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center animate-fade-in"
-      style={{ background: 'rgba(4,13,26,0.90)', backdropFilter: 'blur(12px)' }}
-      onClick={onClose}>
-      <div className="relative bg-white w-80 mx-4 overflow-hidden"
-        style={{ borderRadius: 20, border: '2px solid rgba(212,175,55,0.3)', boxShadow: '0 30px 80px rgba(0,0,0,0.5)' }}
-        onClick={e => e.stopPropagation()}>
-        <button onClick={onClose}
-          className="absolute top-3 right-3 z-10 w-9 h-9 rounded-full flex items-center justify-center bg-white shadow hover:bg-gray-50 transition-all">
-          <X size={16} style={{ color: '#0A2463' }} />
-        </button>
-
-        {/* Foto grande */}
-        <div className="w-full h-52 bg-[#0A2463]/8 relative overflow-hidden">
-          <img src={item.img} alt={item.label} className="w-full h-full object-cover"
-            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-          {/* Placeholder */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-2">
-            <span className="text-5xl font-black text-[#0A2463]/8" style={{ fontFamily: "'Syne', sans-serif" }}>{item.id}</span>
-            <span className="text-[9px] text-[#0A2463]/20 px-6 text-center leading-relaxed">
-              Coloca la imagen en:<br />/public{item.img}
-            </span>
-          </div>
-        </div>
-
-        <div className="px-5 py-4">
-          <p className="text-sm font-black text-[#0A2463] mb-1" style={{ fontFamily: "'Syne', sans-serif" }}>{item.id}</p>
-          <p className="text-xs text-[#0A2463]/50 mb-4">{item.label}</p>
-          <button onClick={() => { onSelect(); onClose(); }}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black text-white uppercase tracking-wide transition-all active:scale-95"
-            style={{
-              background: selected ? '#10b981' : '#0A2463',
-              fontFamily: "'Syne', sans-serif",
-              boxShadow: '0 4px 16px rgba(10,36,99,0.2)',
-            }}>
-            <Check size={15} />
-            {selected ? 'Seleccionado ✓' : 'Seleccionar'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ══════════════════════════════════════════════════════════════
 // ITEM CARD — thumbnail pequeño con hover
 // ══════════════════════════════════════════════════════════════
 interface ItemCardProps {
@@ -256,21 +201,23 @@ interface ItemCardProps {
 function ItemCard({ item, selected, onClick, width = 80, height = 64 }: ItemCardProps) {
   return (
     <button type="button" onClick={onClick}
-      className="relative rounded-xl overflow-hidden border-2 transition-all group shrink-0"
-      style={{ borderColor: selected ? '#0A2463' : '#e2e8f0', width }}>
+      className="relative rounded-xl overflow-hidden border-2 transition-all group shrink-0 active:scale-95"
+      style={{
+        borderColor: selected ? '#0A2463' : '#e2e8f0',
+        width,
+        boxShadow: selected ? '0 0 0 3px rgba(10,36,99,0.12)' : 'none',
+      }}>
       <div className="overflow-hidden relative bg-[#0A2463]/8" style={{ height }}>
         <img src={item.img} alt={item.label} className="w-full h-full object-cover"
           onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-        {/* Hover */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-          style={{ background: 'rgba(10,36,99,0.6)' }}>
-          <ZoomIn size={16} color="white" />
-        </div>
-        {/* Selected */}
+        {/* Hover highlight */}
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
+          style={{ background: 'rgba(10,36,99,0.18)' }} />
+        {/* Check de seleccionado */}
         {selected && (
           <div className="absolute inset-0 flex items-center justify-center"
-            style={{ background: 'rgba(10,36,99,0.4)' }}>
-            <div className="w-6 h-6 rounded-full bg-[#D4AF37] flex items-center justify-center">
+            style={{ background: 'rgba(10,36,99,0.32)' }}>
+            <div className="w-6 h-6 rounded-full bg-[#D4AF37] flex items-center justify-center shadow">
               <Check size={13} color="#0A2463" strokeWidth={3} />
             </div>
           </div>
@@ -305,8 +252,6 @@ interface CatalogPickerProps {
 }
 
 export default function CatalogPicker({ title, items, value, matchBy = 'label', onSelect, width = 72, height = 56, hint }: CatalogPickerProps) {
-  const [lightboxItem, setLightboxItem] = useState<CatalogItem | null>(null);
-
   return (
     <div className="col-span-2">
       <label className="flex items-center justify-between mb-2">
@@ -318,19 +263,11 @@ export default function CatalogPicker({ title, items, value, matchBy = 'label', 
           const sel = matchBy === 'id' ? value === item.id : value === item.label;
           return (
             <ItemCard key={item.id} item={item} selected={sel}
-              onClick={() => setLightboxItem(item)}
+              onClick={() => onSelect(item)}
               width={width} height={height} />
           );
         })}
       </div>
-      {lightboxItem && (
-        <Lightbox
-          item={lightboxItem}
-          selected={matchBy === 'id' ? value === lightboxItem.id : value === lightboxItem.label}
-          onSelect={() => onSelect(lightboxItem)}
-          onClose={() => setLightboxItem(null)}
-        />
-      )}
     </div>
   );
 }

@@ -207,18 +207,9 @@ export default function CabinConfigurator({
     ctx.fillStyle = '#1a1e2a';
     ctx.fill();
     if (plafonTex) {
-      // Dibujar el plafón centrado en el área del techo
-      const ceilW = RL.x - LL.x;
-      const ceilH = FL.y - LL.y;
-      // Escalar imagen del plafón para que quepa correctamente
-      const imgAR = plafonTex.naturalWidth / plafonTex.naturalHeight;
-      const areaAR = ceilW / ceilH;
-      let dw = ceilW, dh = ceilH;
-      if (imgAR > areaAR) { dh = ceilW / imgAR; } else { dw = ceilH * imgAR; }
-      const dx = LL.x + (ceilW - dw) / 2;
-      const dy = LL.y + (ceilH - dh) / 2;
+      // Estirar la imagen del plafón para cubrir todo el área del techo
       ctx.globalAlpha = 0.88;
-      ctx.drawImage(plafonTex, dx, dy, dw, dh);
+      ctx.drawImage(plafonTex, LL.x, LL.y, RL.x - LL.x, FL.y - LL.y);
       ctx.globalAlpha = 1;
     }
     // Velo brillante — simula que el techo recibe luz directa
@@ -240,38 +231,23 @@ export default function CabinConfigurator({
     ctx.save();
     pathFloor(); ctx.clip();
     if (floorTex) {
-      const flH  = LLB.y - FBL.y;
-      const numS = 24;
-      for (let i = 0; i < numS; i++) {
-        const t0 = i / numS, t1 = (i + 1) / numS;
-        const y0  = FBL.y + t0 * flH, y1 = FBL.y + t1 * flH;
-        const x0L = FBL.x + (LLB.x - FBL.x) * t0, x0R = FBR.x + (RLB.x - FBR.x) * t0;
-        const x1L = FBL.x + (LLB.x - FBL.x) * t1, x1R = FBR.x + (RLB.x - FBR.x) * t1;
-        const stripeW = x0R - x0L, stripeH = y1 - y0 + 1;
+      // Dibujar textura de piso en un solo drawImage sobre el bounding box del trapecio
+      // El clip a pathFloor() ya recorta los lados en ángulo — sin franjas = sin costuras
+      ctx.globalAlpha = 0.92;
+      ctx.drawImage(floorTex, LLB.x, FBL.y, RLB.x - LLB.x, LLB.y - FBL.y);
+      ctx.globalAlpha = 1;
 
-        ctx.save();
-        ctx.beginPath();
-        ctx.moveTo(x0L, y0); ctx.lineTo(x0R, y0);
-        ctx.lineTo(x1R, y1+1); ctx.lineTo(x1L, y1+1);
-        ctx.closePath(); ctx.clip();
-
-        const srcY = Math.floor(t0 * floorTex.naturalHeight);
-        const srcH = Math.max(1, Math.floor((t1 - t0) * floorTex.naturalHeight));
-        ctx.globalAlpha = 0.92;
-        ctx.drawImage(floorTex, 0, srcY, floorTex.naturalWidth, srcH, x0L, y0, stripeW, stripeH);
-        ctx.globalAlpha = 1;
-
-        // Oscurecer en profundidad
-        ctx.fillStyle = `rgba(0,0,0,${0.03 + t0 * 0.50})`;
-        ctx.fillRect(x0L - 2, y0, stripeW + 4, stripeH + 1);
-        ctx.restore();
-      }
-      // Reflejo especular sutil en el piso
-      const rfl = ctx.createLinearGradient(W / 2, FBL.y, W / 2, LLB.y);
-      rfl.addColorStop(0,   'rgba(255,255,255,0.10)');
-      rfl.addColorStop(0.25,'rgba(255,255,255,0.03)');
-      rfl.addColorStop(1,   'rgba(0,0,0,0)');
+      // Reflejo especular en la franja frontal del piso
+      const rfl = ctx.createLinearGradient(W / 2, FBL.y, W / 2, FBL.y + (LLB.y - FBL.y) * 0.35);
+      rfl.addColorStop(0, 'rgba(255,255,255,0.13)');
+      rfl.addColorStop(1, 'rgba(255,255,255,0.00)');
       pathFloor(); ctx.fillStyle = rfl; ctx.fill();
+
+      // Oscurecer en profundidad (perspectiva)
+      const depth = ctx.createLinearGradient(W / 2, FBL.y, W / 2, LLB.y);
+      depth.addColorStop(0, 'rgba(0,0,0,0.00)');
+      depth.addColorStop(1, 'rgba(0,0,0,0.52)');
+      pathFloor(); ctx.fillStyle = depth; ctx.fill();
     } else {
       const fg = ctx.createLinearGradient(W / 2, FBL.y, W / 2, LLB.y);
       fg.addColorStop(0, '#32364a'); fg.addColorStop(1, '#1a1d28');
