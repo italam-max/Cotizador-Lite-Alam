@@ -15,7 +15,7 @@ import {
   ArrowLeft, ArrowRight, Save, Loader2,
   User, Settings2, DollarSign, AlertTriangle,
   CheckCircle2, Info, Sparkles, FileText, Mail,
-  Download, Eye
+  Download, Eye, ChevronDown
 } from 'lucide-react';
 import CatalogPicker from '../../components/ui/CatalogPicker';
 import CabinConfigurator from '../../components/ui/CabinConfigurator';
@@ -789,30 +789,27 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
                   </Field>
                 </div>
 
-                {/* Especificaciones calculadas — editables por el vendedor */}
+                {/* Especificaciones técnicas editables */}
                 <div className="mt-4 p-4 rounded-xl bg-[#0A2463]/4 border border-[#0A2463]/10">
                   <p className="text-[10px] font-black text-[#0A2463]/50 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                    <Info size={10} /> Calculado automáticamente — editable
+                    <Info size={10} /> Especificaciones técnicas — editables
                   </p>
                   <div className="grid grid-cols-2 gap-3">
-                    <Field label="Sistema de tracción" hint="Auto por modelo">
-                      <input className={INPUT} value={form.traction || ''}
-                        onChange={e => update({ traction: e.target.value })}
-                        placeholder={autoTractionLabel(form.model, String(form.speed))} />
-                    </Field>
                     <Field label="Botoneras COP / LOP" hint="Editable">
                       <input className={INPUT} value={form.control_group || ''}
                         onChange={e => update({ control_group: e.target.value })}
                         placeholder="Punto Matriz" />
                     </Field>
-                    <div>
-                      <p className="text-[10px] font-bold text-[#0A2463]/50 uppercase mb-1">Rieles cabina / contrapeso</p>
-                      <p className="text-xs font-semibold text-[#0A2463]">{autoRails(form.model).cabin} / {autoRails(form.model).counterweight}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold text-[#0A2463]/50 uppercase mb-1">Nomenclatura de pisos</p>
-                      <p className="text-xs font-semibold text-[#0A2463] truncate">{generateFloorNomenclature(form.stops)}</p>
-                    </div>
+                    <Field label="Rieles cabina / contrapeso" hint="Auto por modelo">
+                      <input className={INPUT} value={form.shaft_type || ''}
+                        onChange={e => update({ shaft_type: e.target.value })}
+                        placeholder={`${autoRails(form.model).cabin} / ${autoRails(form.model).counterweight}`} />
+                    </Field>
+                    <Field label="Nomenclatura de pisos" hint="Auto por paradas" col="col-span-2">
+                      <input className={INPUT} value={form.traction || ''}
+                        onChange={e => update({ traction: e.target.value })}
+                        placeholder={generateFloorNomenclature(form.stops)} />
+                    </Field>
                   </div>
                 </div>
               </SectionCard>
@@ -828,31 +825,52 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
           {/* ════ PASO 3 ════ */}
           {step === 3 && (
             <div className="space-y-5 animate-fade-in">
-              <SectionCard title="Proveedor — uso interno, no aparece en PDF del cliente">
-                <div className="grid grid-cols-2 gap-3">
-                  {(['Turco','Chino'] as const).map(s => {
-                    const isForced = s === 'Turco' && dimWarnings.length > 0;
-                    return (
-                      <button key={s} onClick={() => !isForced && update({ supplier: s })}
-                        className="py-4 px-5 rounded-xl text-left transition-all border-2 relative"
-                        style={{ background: form.supplier === s ? '#0A2463' : 'white', borderColor: form.supplier === s ? '#0A2463' : '#e2e8f0', color: form.supplier === s ? 'white' : '#0A2463' }}>
-                        <p className="font-bold text-sm" style={{ fontFamily: "'Syne', sans-serif" }}>
-                          {s === 'Turco' ? '🇹🇷' : '🇨🇳'} Proveedor {s}
-                        </p>
-                        <p className="text-xs mt-0.5 opacity-60">
-                          {s === 'Turco' ? 'Asansör — a medida y estándar' : 'Estándar — medidas de catálogo'}
-                        </p>
-                        {isForced && <span className="absolute top-2 right-2 text-[9px] bg-orange-400 text-white px-1.5 py-0.5 rounded-full font-bold">REQUERIDO</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-                {dimWarnings.length > 0 && (
-                  <p className="text-xs text-orange-600 mt-3 flex items-center gap-1.5 font-medium">
-                    <AlertTriangle size={12} /> Dimensiones fuera de estándar — proveedor Turco obligatorio
+
+              {/* Proveedor — colapsable, uso interno */}
+              <details className="luxury-glass rounded-2xl border border-[#D4AF37]/10 shadow-sm overflow-hidden">
+                <summary className="flex items-center justify-between px-5 py-3 cursor-pointer select-none list-none">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px]">🔒</span>
+                    <span className="text-[10px] font-black text-[#0A2463]/50 uppercase tracking-widest">
+                      Uso interno — Proveedor
+                    </span>
+                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                      form.supplier === 'Turco' ? 'bg-amber-100 text-amber-700' : 'bg-blue-50 text-blue-600'
+                    }`}>
+                      {form.supplier === 'Turco' ? '🇹🇷 Turco' : '🇨🇳 Chino'}
+                    </span>
+                    {dimWarnings.length > 0 && (
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 flex items-center gap-1">
+                        <AlertTriangle size={8} /> Requerido Turco
+                      </span>
+                    )}
+                  </div>
+                  <ChevronDown size={13} className="text-[#0A2463]/30" />
+                </summary>
+                <div className="px-5 pb-4 border-t border-[#0A2463]/6">
+                  <p className="text-[9px] text-[#0A2463]/40 mt-3 mb-3 italic">
+                    No aparece en la propuesta del cliente · Solo visible para el equipo de ventas
                   </p>
-                )}
-              </SectionCard>
+                  <div className="grid grid-cols-2 gap-3">
+                    {(['Turco','Chino'] as const).map(s => {
+                      const isForced = s === 'Turco' && dimWarnings.length > 0;
+                      return (
+                        <button key={s} onClick={() => !isForced && update({ supplier: s })}
+                          className="py-3 px-4 rounded-xl text-left transition-all border-2 relative"
+                          style={{ background: form.supplier === s ? '#0A2463' : 'white', borderColor: form.supplier === s ? '#0A2463' : '#e2e8f0', color: form.supplier === s ? 'white' : '#0A2463' }}>
+                          <p className="font-bold text-sm" style={{ fontFamily: "'Syne', sans-serif" }}>
+                            {s === 'Turco' ? '🇹🇷' : '🇨🇳'} {s}
+                          </p>
+                          <p className="text-xs mt-0.5 opacity-60">
+                            {s === 'Turco' ? 'Asansör — a medida' : 'Estándar catálogo'}
+                          </p>
+                          {isForced && <span className="absolute top-2 right-2 text-[9px] bg-orange-400 text-white px-1.5 py-0.5 rounded-full font-bold">REQUERIDO</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </details>
 
               <SectionCard title="Precio de venta" icon={DollarSign}>
                 <div className="grid grid-cols-2 gap-4">

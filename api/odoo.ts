@@ -52,27 +52,35 @@ async function call(model: string, method: string, args: unknown[], kwargs: Reco
   });
 
   const text = await res.text();
-  if (!text) throw new Error('Odoo devolvio respuesta vacia');
+  if (!text) throw new Error(`Odoo devolvio respuesta vacia (HTTP ${res.status})`);
 
-  // Detectar fault
+  // Detectar fault XML-RPC
   if (text.includes('<fault>')) {
-    const msg = text.match(/<name>faultString<\/name>\s*<value><string>([\s\S]*?)<\/string>/)?.[1]
+    const faultStr = text.match(/<name>faultString<\/name>\s*<value><string>([\s\S]*?)<\/string>/)?.[1]
       ?? text.match(/<string>([\s\S]*?)<\/string>/)?.[1]
-      ?? 'Error Odoo';
+      ?? 'Error Odoo desconocido';
+    const faultCode = text.match(/<name>faultCode<\/name>\s*<value><int>([\s\S]*?)<\/int>/)?.[1] ?? '?';
     throw new Error(
-      msg.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').substring(0, 400)
+      `[Odoo fault code=${faultCode}] ${faultStr}`
+        .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+        .substring(0, 600)
     );
   }
 
-  // Extraer resultado (int, string, array, struct, etc.)
-  return extractResult(text);
+  const result = extractResult(text);
+  // Log para debug en Vercel (visible en Function Logs)
+  console.log(`[odoo] ${model}.${method} →`, JSON.stringify(result)?.substring(0, 120));
+  return result;
 }
 
 function extractResult(xml: string): unknown {
-  // Buscar primer <param><value>...</value></param> en methodResponse
-  const m = xml.match(/<methodResponse>\s*<params>\s*<param>\s*<value>([\s\S]*?)<\/value>\s*<\/param>/);
-  if (!m) return null;
-  return parseValue(m[1].trim());
+  // Extraer el bloque <params>...</params> completo y tomar el primer <param>
+  const paramsBlock = xml.match(/<params>([\s\S]*?)<\/params>/)?.[1] ?? '';
+  const paramBlock  = paramsBlock.match(/<param>([\s\S]*?)<\/param>/)?.[1] ?? '';
+  // Tomar el <value> de ese param — capturamos TODO el contenido incluyendo nested tags
+  const valueBlock  = paramBlock.match(/<value>([\s\S]*)<\/value>/)?.[1] ?? '';
+  if (!valueBlock.trim()) return null;
+  return parseValue(valueBlock.trim());
 }
 
 function parseValue(s: string): unknown {

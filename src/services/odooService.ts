@@ -31,12 +31,22 @@ async function callOdoo(
 async function findOrCreatePartner(
   name: string, email?: string, phone?: string
 ): Promise<number> {
-  const found = await callOdoo('res.partner', 'search_read',
-    [[['name', '=', name]]],
-    { fields: ['id', 'name'], limit: 1 }
-  ) as Array<{ id: number }>;
-  if (Array.isArray(found) && found.length > 0) return Number(found[0].id);
+  // Buscar contacto existente por nombre
+  let found: Array<{ id: number }> = [];
+  try {
+    const raw = await callOdoo('res.partner', 'search_read',
+      [[['name', '=', name]]],
+      { fields: ['id', 'name'], limit: 1 }
+    );
+    if (Array.isArray(raw) && raw.length > 0) found = raw as Array<{ id: number }>;
+  } catch { /* si falla la búsqueda, intentamos crear igual */ }
 
+  if (found.length > 0) {
+    const id = Number(found[0].id);
+    if (id && !isNaN(id)) return id;
+  }
+
+  // Crear nuevo contacto
   const result = await callOdoo('res.partner', 'create', [{
     name,
     email:         email  || '',
@@ -45,7 +55,13 @@ async function findOrCreatePartner(
     customer_rank: 1,
   }]);
   const id = Number(result);
-  if (!id || isNaN(id)) throw new Error(`Error al crear contacto en Odoo: ${JSON.stringify(result)}`);
+  if (!id || isNaN(id)) {
+    throw new Error(
+      `Odoo no devolvió un ID válido al crear el contacto.\n` +
+      `Respuesta recibida: ${JSON.stringify(result)}\n` +
+      `Verifica que ODOO_UID tenga permisos de escritura en res.partner.`
+    );
+  }
   return id;
 }
 

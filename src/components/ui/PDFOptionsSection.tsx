@@ -159,7 +159,7 @@ export default function PDFOptionsSection({ value, onChange }: Props) {
         </p>
         <div className="space-y-2">
           {[
-            { key: 'mostrar_normativa' as const, label: 'Normativa aplicable (EN 81-20 / NOM-53)' },
+            { key: 'mostrar_normativa' as const, label: 'Incluir bloque de normativa en propuesta' },
             { key: 'mostrar_calidad'   as const, label: 'Calidad y estándares' },
             { key: 'mostrar_ventajas'  as const, label: 'Ventajas del sistema ALAMEX' },
           ].map(({ key, label }) => (

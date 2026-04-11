@@ -339,17 +339,16 @@ export function QuotePDFDocument({
                 )}
                 <Spec label="VELOCIDAD"              value={`${q.speed} m/seg`} />
                 <Spec label="MÁQUINA"                value={machineRoom} alt />
-                <Spec label="RIELES CABINA"          value={autoRails(q.model).cabin} />
-                <Spec label="RIELES CONTRAPESO"      value={autoRails(q.model).counterweight} alt />
-                <Spec label="SISTEMA DE TRACCIÓN"    value={autoTractionLabel(q.model, String(q.speed))} />
-                <Spec label="CONTROL"                value="ALAMEX 220V / 14A" alt />
-                <Spec label="PANEL CABINA (COP)"     value={q.control_group || 'Punto Matriz'} />
-                <Spec label="PANEL PISO (LOP)"       value={q.control_group || 'Punto Matriz'} alt />
-                <Spec label="TIPO DE GRUPO"          value={groupLabel} />
-                <Spec label="SISTEMA DE TRACCIÓN"    value={q.traction || autoTractionLabel(q.model, String(q.speed))} alt />
-                <Spec label="ACABADO DE CABINA"      value={q.cabin_finish} />
-                <Spec label="PISO DE CABINA"         value={q.cabin_floor} alt />
-                <Spec label="PLAFÓN / COP"           value={q.cop_model} />
+                <Spec label="RIELES CABINA"          value={q.shaft_type ? q.shaft_type.split('/')[0]?.trim() : autoRails(q.model).cabin} />
+                <Spec label="RIELES CONTRAPESO"      value={q.shaft_type ? q.shaft_type.split('/')[1]?.trim() : autoRails(q.model).counterweight} alt />
+                <Spec label="CONTROL"                value="ALAMEX 220V / 14A" />
+                <Spec label="PANEL CABINA (COP)"     value={q.control_group || 'Punto Matriz'} alt />
+                <Spec label="PANEL PISO (LOP)"       value={q.control_group || 'Punto Matriz'} />
+                <Spec label="TIPO DE GRUPO"          value={groupLabel} alt />
+                <Spec label="NOMENCLATURA"           value={q.traction || generateFloorNomenclature(q.stops)} />
+                <Spec label="ACABADO DE CABINA"      value={q.cabin_finish} alt />
+                <Spec label="PISO DE CABINA"         value={q.cabin_floor} />
+                <Spec label="PLAFÓN / COP"           value={q.cop_model} alt />
                 {(() => {
                   try {
                     const ex: string[] = JSON.parse(q.cabin_model || '[]');

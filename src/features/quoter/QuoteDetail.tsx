@@ -112,49 +112,114 @@ function PDFButton({ quote, sellerName, sellerTitle }: { quote: Quote; sellerNam
   );
 }
 
+// ── Modal de debug para errores de Odoo ──────────────────────
+function OdooDebugModal({ error, onClose }: { error: string; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[300] flex items-center justify-center"
+      style={{ background: 'rgba(4,13,26,0.88)', backdropFilter: 'blur(8px)' }}
+      onClick={onClose}>
+      <div className="relative bg-white w-full max-w-xl mx-4 rounded-2xl overflow-hidden shadow-2xl"
+        style={{ border: '1px solid rgba(239,68,68,0.25)' }}
+        onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="px-6 py-4 flex items-center justify-between"
+          style={{ background: 'linear-gradient(90deg,#7f1d1d,#991b1b)', borderBottom: '2px solid #ef4444' }}>
+          <div className="flex items-center gap-2">
+            <AlertCircle size={16} className="text-red-300" />
+            <p className="font-black text-white text-sm" style={{ fontFamily:"'Syne',sans-serif" }}>
+              Error de conexión — Odoo CRM
+            </p>
+          </div>
+          <button onClick={onClose} className="text-white/50 hover:text-white text-xl px-1">✕</button>
+        </div>
+        {/* Body */}
+        <div className="p-6">
+          <p className="text-xs text-[#0A2463]/50 mb-3">
+            El servidor Odoo devolvió el siguiente error. Comparte este detalle con el administrador de sistema:
+          </p>
+          <pre className="bg-gray-950 text-green-400 text-xs p-4 rounded-xl overflow-auto max-h-64 leading-relaxed whitespace-pre-wrap">
+            {error}
+          </pre>
+          <div className="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200">
+            <p className="text-[10px] font-bold text-amber-700 mb-1">Posibles causas:</p>
+            <ul className="text-[10px] text-amber-700 space-y-0.5 list-disc list-inside">
+              <li>Variables de entorno ODOO_URL / ODOO_DB / ODOO_UID / ODOO_API_KEY no configuradas en Vercel</li>
+              <li>El UID o API key no tienen permisos para crear partners/leads en ese Odoo</li>
+              <li>stage_id:1 no existe en el pipeline de CRM — cambiar a stage_id:2 o consultar Odoo</li>
+              <li>El módulo CRM no está instalado en la instancia</li>
+            </ul>
+          </div>
+          <button onClick={onClose}
+            className="mt-4 w-full py-2.5 rounded-xl text-xs font-bold border border-[#0A2463]/15 text-[#0A2463]/60 hover:bg-[#0A2463]/5 transition-all">
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Botón Enviar a Odoo CRM ──────────────────────────────────
-// Llama al API Route /api/odoo (Vercel serverless).
-// Sin configuración por usuario — credenciales en variables de entorno del servidor.
 function OdooButton({ quote }: { quote: Quote }) {
-  const [loading, setLoading] = useState(false);
-  const [status,  setStatus]  = useState<'idle' | 'ok' | 'error'>('idle');
-  const [msg,     setMsg]     = useState('');
+  const [loading,   setLoading]   = useState(false);
+  const [status,    setStatus]    = useState<'idle' | 'ok' | 'error'>('idle');
+  const [msg,       setMsg]       = useState('');
+  const [debugErr,  setDebugErr]  = useState('');
+  const [showDebug, setShowDebug] = useState(false);
 
   const sendToOdoo = async () => {
-    setLoading(true); setStatus('idle'); setMsg('');
+    setLoading(true); setStatus('idle'); setMsg(''); setDebugErr('');
     try {
       const { sendQuoteToOdoo } = await import('../../services/odooService');
-      const { leadId } = await sendQuoteToOdoo(quote);
+      const { leadId, partnerId } = await sendQuoteToOdoo(quote);
       setStatus('ok');
-      setMsg(`✓ Oportunidad ${leadId} creada en Odoo CRM`);
+      setMsg(`✓ Lead #${leadId} creado (Contacto #${partnerId})`);
     } catch (e: any) {
       setStatus('error');
-      setMsg(e.message || 'Error de conexión con Odoo');
+      const errMsg = e.message || 'Error desconocido';
+      setMsg('Error — ver detalles');
+      // Capturar stack + mensaje para debug
+      setDebugErr(
+        `MENSAJE:\n${errMsg}\n\n` +
+        `COTIZACIÓN:\n  Folio: ${quote.folio}\n  Cliente: ${quote.client_name}\n  Email: ${quote.client_email || '—'}\n\n` +
+        `TIMESTAMP: ${new Date().toISOString()}`
+      );
     } finally { setLoading(false); }
   };
 
   return (
-    <div className="flex flex-col gap-1">
-      <button onClick={sendToOdoo} disabled={loading || status === 'ok'}
-        className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wide transition-all active:scale-95 disabled:opacity-50"
-        style={{
-          background: status === 'ok' ? '#10b981' : '#7C3AED',
-          color: 'white',
-          fontFamily: "'Syne', sans-serif",
-          boxShadow: status === 'ok' ? 'none' : '0 4px 14px rgba(124,58,237,0.3)',
-        }}>
-        {loading
-          ? <><Loader2 size={13} className="animate-spin" /> Enviando...</>
-          : status === 'ok'
-          ? <><CheckCircle2 size={13} /> Enviado a Odoo</>
-          : <><Zap size={13} /> Enviar al CRM</>}
-      </button>
-      {msg && (
-        <p className={`text-[10px] font-medium ${status === 'ok' ? 'text-emerald-600' : 'text-red-500'}`}>
-          {msg}
-        </p>
-      )}
-    </div>
+    <>
+      {showDebug && <OdooDebugModal error={debugErr} onClose={() => setShowDebug(false)} />}
+      <div className="flex flex-col gap-1">
+        <button onClick={sendToOdoo} disabled={loading || status === 'ok'}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wide transition-all active:scale-95 disabled:opacity-50"
+          style={{
+            background: status === 'ok' ? '#10b981' : status === 'error' ? '#dc2626' : '#7C3AED',
+            color: 'white',
+            fontFamily: "'Syne', sans-serif",
+            boxShadow: status === 'ok' ? 'none' : '0 4px 14px rgba(124,58,237,0.3)',
+          }}>
+          {loading
+            ? <><Loader2 size={13} className="animate-spin" /> Enviando...</>
+            : status === 'ok'
+            ? <><CheckCircle2 size={13} /> Enviado a Odoo</>
+            : <><Zap size={13} /> Enviar al CRM</>}
+        </button>
+        {msg && (
+          <div className="flex items-center gap-1">
+            <p className={`text-[10px] font-medium ${status === 'ok' ? 'text-emerald-600' : 'text-red-500'}`}>
+              {msg}
+            </p>
+            {status === 'error' && (
+              <button onClick={() => setShowDebug(true)}
+                className="text-[10px] font-bold text-red-400 underline hover:text-red-600 transition-colors">
+                Ver error
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
