@@ -3,6 +3,7 @@
 // botón "Enviar al CRM de Odoo" con configuración via variables de entorno
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ArrowLeft, Edit3, ChevronDown, Loader2, CheckCircle2, Clock,
   Send, TrendingUp, Award, XCircle, Ban, MessageSquare, Download,
@@ -114,8 +115,8 @@ function PDFButton({ quote, sellerName, sellerTitle }: { quote: Quote; sellerNam
 
 // ── Modal de debug para errores de Odoo ──────────────────────
 function OdooDebugModal({ error, onClose }: { error: string; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center"
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center"
       style={{ background: 'rgba(4,13,26,0.88)', backdropFilter: 'blur(8px)' }}
       onClick={onClose}>
       <div className="relative bg-white w-full max-w-xl mx-4 rounded-2xl overflow-hidden shadow-2xl"
@@ -155,7 +156,8 @@ function OdooDebugModal({ error, onClose }: { error: string; onClose: () => void
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
