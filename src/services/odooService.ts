@@ -76,15 +76,46 @@ export async function sendQuoteToOdoo(
     quote.client_phone || '',
   );
 
+  const isMR = quote.model === 'MR';
+  const extrasArr: string[] = (() => { try { return JSON.parse(quote.cabin_model || '[]'); } catch { return []; } })();
+  const EXTRA_LABELS: Record<string, string> = {
+    'espejo-trasero': 'Espejo fondo', 'espejo-lateral': 'Espejo lateral',
+    'pasamanos-inox': 'Pasamanos INOX', 'pasamanos-crom': 'Pasamanos cromado',
+    'led-premium': 'LED Premium', 'panoramico': 'Panel panorámico',
+  };
+  const extrasStr = extrasArr.map(e => EXTRA_LABELS[e] || e).join(', ') || '—';
+
   const description = [
+    '━━ DATOS GENERALES ━━',
     `Folio: ${quote.folio}`,
-    `Modelo: ${quote.model} | ${quote.use_type}`,
+    `Fecha proyecto: ${quote.project_date || '—'}`,
+    `Modelo: ${quote.model} | Uso: ${quote.use_type}`,
+    '',
+    '━━ ESPECIFICACIONES TÉCNICAS ━━',
     `Capacidad: ${quote.capacity} kg / ${quote.persons} personas`,
     `Paradas: ${quote.stops} | Velocidad: ${quote.speed} m/s`,
     `Recorrido: ${((quote.travel || 0) / 1000).toFixed(1)} m`,
-    `Cubo: ${quote.shaft_width} x ${quote.shaft_depth} mm`,
-    `Total: $${total.toLocaleString('es-MX')} ${quote.currency}`,
-  ].join('\n');
+    `Cubo: ${quote.shaft_width} × ${quote.shaft_depth} mm`,
+    isMR ? `Fosa: ${quote.pit} mm | Sobrepaso: ${quote.overhead} mm` : '',
+    `Normativa: ${quote.norm || 'EN 81-20'}`,
+    '',
+    '━━ CABINA ━━',
+    `Acabado: ${quote.cabin_finish || '—'}`,
+    `Piso: ${quote.cabin_floor || '—'}`,
+    `Plafón/COP: ${quote.cop_model || '—'}`,
+    `Accesorios: ${extrasStr}`,
+    '',
+    '━━ PUERTAS ━━',
+    `Tipo: ${quote.door_type || '—'}`,
+    `Dimensiones: ${quote.door_width} × ${quote.door_height} mm`,
+    '',
+    '━━ CONDICIONES COMERCIALES ━━',
+    `Total: $${total.toLocaleString('es-MX')} ${quote.currency || 'MXN'}`,
+    `Entrega: ${quote.commercial_terms?.deliveryTime || '—'}`,
+    `Garantía: ${quote.commercial_terms?.warranty || '—'}`,
+    `Validez: ${quote.commercial_terms?.validity || '—'}`,
+    quote.internal_notes ? `\nNotas internas: ${quote.internal_notes}` : '',
+  ].filter(l => l !== undefined).join('\n');
 
   const leadId = await createCRMLead({
     name:      `[${quote.folio}] ${quote.model} - ${quote.client_name}`,

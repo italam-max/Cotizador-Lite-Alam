@@ -24,7 +24,7 @@ import {
   computeDefaults, getAllowedModels, getAllowedSpeeds,
   validate, CAPACITIES, CAPACITY_PERSONS,
   CABIN_WALLS, CABIN_EXTRAS, FLOOR_FINISHES, PLAFONOS,
-  generateFloorNomenclature, autoRails, autoTractionLabel, buildCabinDescription
+  generateFloorNomenclature, autoRails, autoTractionLabel
 } from '../../data/engineRules';
 import type { Quote } from '../../types';
 import { EMPTY_QUOTE } from '../../types';
@@ -356,19 +356,11 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
     if (errors.length > 0) { setStep(2); return; }
     setSaving(true);
     try {
-      // Construir descripción de cabina desde los atributos
-      const extras: string[] = (() => { try { return JSON.parse(form.cabin_model || '[]'); } catch { return []; } })();
-      const cabinDesc = buildCabinDescription(
-        form.cabin_finish || '',
-        extras,
-        form.cabin_floor  || '',
-        form.cop_model    || '',
-        form.use_type     || 'Pasajeros'
-      );
+      // cabin_model guarda el JSON array de extras (["espejo-trasero","led-premium",...])
+      // NO se sobreescribe con descripción — así QuoteDetail puede parsear los extras correctamente
       const dataToSave = {
         ...form,
         status:      'Enviada' as const,
-        cabin_model: cabinDesc, // guardamos la descripción generada
         pdf_options: pdfOptions,
       };
       let saved: Quote;

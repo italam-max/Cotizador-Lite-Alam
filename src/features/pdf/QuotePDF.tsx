@@ -178,7 +178,10 @@ export function QuotePDFDocument({
   cabinImage,
 }: Props) {
   const fmt   = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
-  const today = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
+  // Usar project_date de la cotización; si no existe, usar la fecha actual
+  const quoteDate = q.project_date
+    ? new Date(q.project_date + 'T12:00:00').toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' })
+    : new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
 
   const isMR  = q.model === 'MR';
   const isHyd = q.model === 'HYD' || q.model === 'Home Lift';
@@ -193,11 +196,11 @@ export function QuotePDFDocument({
     : 'Simplex';
 
   const terms = q.commercial_terms || {
-    paymentMethod:      '50% Anticipo / 25% Embarque / 20% Entrega / 05% Puesta en marcha',
-    deliveryTime:       '6 meses a partir de firma de contrato y anticipo',
-    warranty:           '3 años a partir de la entrega del equipo funcionando',
-    validity:           '15 días naturales',
-    generalConditions:  'Obra civil por cuenta del cliente.',
+    paymentMethod:     '50% Anticipo a la firma del Contrato\n25% Al aviso de embarque\n20% Al aviso de entrega del equipo en obra\n05% Al aviso de entrega en funcionamiento',
+    deliveryTime:      'A confirmar tras anticipo',
+    warranty:          '12 meses en partes y mano de obra',
+    validity:          '30 días naturales',
+    generalConditions: 'Obra civil por cuenta del cliente.',
   };
 
   // Opciones PDF con defaults (todo activo si no hay config)
@@ -243,7 +246,7 @@ export function QuotePDFDocument({
             </View>
             <View style={{ flexDirection: 'row', gap: 4 }}>
               <Text style={{ fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: NAVY }}>Fecha:</Text>
-              <Text style={{ fontSize: 8.5, color: BLK }}>{today}</Text>
+              <Text style={{ fontSize: 8.5, color: BLK }}>{quoteDate}</Text>
             </View>
             {q.client_email ? (
               <View style={{ flexDirection: 'row', gap: 4 }}>
@@ -343,14 +346,27 @@ export function QuotePDFDocument({
                 <Spec label="PANEL CABINA (COP)"     value="Punto Matriz" />
                 <Spec label="PANEL PISO (LOP)"       value="Punto Matriz" alt />
                 <Spec label="TIPO DE GRUPO"          value={groupLabel} />
-                <Spec label="MODELO DE CABINA"       value={q.cabin_model || 'CLX-102B'} alt />
-                <Spec label="ACABADO DE CABINA"      value={q.cabin_finish || 'INOX'} />
-                <Spec label="PISO DE CABINA"         value={q.cabin_floor || 'Granito'} alt />
-                <Spec label="PLAFÓN / COP"           value={q.cop_model || 'LV-29'} />
+                <Spec label="ACABADO DE CABINA"      value={q.cabin_finish} alt />
+                <Spec label="PISO DE CABINA"         value={q.cabin_floor} />
+                <Spec label="PLAFÓN / COP"           value={q.cop_model} alt />
+                {(() => {
+                  try {
+                    const ex: string[] = JSON.parse(q.cabin_model || '[]');
+                    if (Array.isArray(ex) && ex.length > 0) {
+                      const EL: Record<string,string> = {
+                        'espejo-trasero':'Espejo fondo','espejo-lateral':'Espejo lateral',
+                        'pasamanos-inox':'Pasam. INOX','pasamanos-crom':'Pasam. cromado',
+                        'led-premium':'LED Premium','panoramico':'Panel panorámico',
+                      };
+                      return <Spec label="ACCESORIOS CABINA" value={ex.map(e => EL[e] || e).join(' / ')} />;
+                    }
+                  } catch { /* sin extras */ }
+                  return null;
+                })()}
                 <Spec label="PUERTAS DE PISO"        value={q.use_type === 'Pasajeros' ? 'Acero Inoxidable (INOX)' : 'Pintura Epóxica Industrial'} alt />
                 <Spec label="PUERTAS DE CABINA"      value={q.use_type === 'Pasajeros' ? 'Acero Inoxidable (INOX)' : 'Pintura Epóxica Industrial'} />
                 <Spec label="NOMENCLATURA"           value={generateFloorNomenclature(q.stops)} alt />
-                <Spec label="NORMATIVA"              value={q.norm || 'EN 81-20'} />
+                <Spec label="NORMATIVA"              value={q.norm} />
               </View>
             </View>
 
@@ -408,7 +424,7 @@ export function QuotePDFDocument({
               <View style={{ borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
                 <Spec label="Puertas de piso"   value={`${q.stops} puertas`} />
                 <Spec label="Puertas de cabina" value="1 puerta" alt />
-                <Spec label="Tipo de puerta"    value={q.door_type || 'Automática Central'} />
+                <Spec label="Tipo de puerta"    value={q.door_type} />
                 <Spec label="Dimensiones"       value={`${q.door_width} mm × ${q.door_height} mm`} alt />
                 <Spec label="Acabado"           value={q.use_type === 'Pasajeros' ? 'Acero Inoxidable (INOX)' : 'Pintura Epóxica Industrial'} />
               </View>
