@@ -35,34 +35,37 @@ async function findOrCreatePartner(
     [[['name', '=', name]]],
     { fields: ['id', 'name'], limit: 1 }
   ) as Array<{ id: number }>;
-  if (found?.length > 0) return found[0].id;
+  if (Array.isArray(found) && found.length > 0) return Number(found[0].id);
 
-  // Campos confirmados en DB: name, email, phone, company_type, is_company, ref
-  return callOdoo('res.partner', 'create', [{
+  const result = await callOdoo('res.partner', 'create', [{
     name,
-    email:        email || '',
-    phone:        phone || '',
-    is_company:   true,
+    email:         email  || '',
+    phone:         phone  || '',
+    is_company:    true,
     customer_rank: 1,
-  }]) as Promise<number>;
+  }]);
+  const id = Number(result);
+  if (!id || isNaN(id)) throw new Error(`Error al crear contacto en Odoo: ${JSON.stringify(result)}`);
+  return id;
 }
 
 async function createCRMLead(params: {
   name: string; partnerId: number; revenue: number;
   description: string; folio: string;
 }): Promise<number> {
-  // Campos confirmados en DB: name, partner_id, expected_revenue,
-  // description, type, user_id, priority, stage_id, team_id, tag_ids
-  // ❌ NO existe: ref, planned_revenue, origin
-  return callOdoo('crm.lead', 'create', [{
+  const result = await callOdoo('crm.lead', 'create', [{
     name:             params.name,
     partner_id:       params.partnerId,
     expected_revenue: params.revenue,
     description:      params.description,
     type:             'opportunity',
-    user_id:          1,              // OdooBot como responsable
-    priority:         '0',           // normal
-  }]) as Promise<number>;
+    priority:         0,             // int (no string) — 0=Normal, 1=Baja, 2=Alta, 3=Muy Alta
+    stage_id:         1,             // Primera etapa del pipeline (Nuevo / Calificación)
+  }]);
+
+  const id = Number(result);
+  if (!id || isNaN(id)) throw new Error(`Odoo devolvió un ID inválido: ${JSON.stringify(result)}`);
+  return id;
 }
 
 export async function sendQuoteToOdoo(

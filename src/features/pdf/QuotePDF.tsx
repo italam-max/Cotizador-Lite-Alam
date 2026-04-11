@@ -343,12 +343,13 @@ export function QuotePDFDocument({
                 <Spec label="RIELES CONTRAPESO"      value={autoRails(q.model).counterweight} alt />
                 <Spec label="SISTEMA DE TRACCIÓN"    value={autoTractionLabel(q.model, String(q.speed))} />
                 <Spec label="CONTROL"                value="ALAMEX 220V / 14A" alt />
-                <Spec label="PANEL CABINA (COP)"     value="Punto Matriz" />
-                <Spec label="PANEL PISO (LOP)"       value="Punto Matriz" alt />
+                <Spec label="PANEL CABINA (COP)"     value={q.control_group || 'Punto Matriz'} />
+                <Spec label="PANEL PISO (LOP)"       value={q.control_group || 'Punto Matriz'} alt />
                 <Spec label="TIPO DE GRUPO"          value={groupLabel} />
-                <Spec label="ACABADO DE CABINA"      value={q.cabin_finish} alt />
-                <Spec label="PISO DE CABINA"         value={q.cabin_floor} />
-                <Spec label="PLAFÓN / COP"           value={q.cop_model} alt />
+                <Spec label="SISTEMA DE TRACCIÓN"    value={q.traction || autoTractionLabel(q.model, String(q.speed))} alt />
+                <Spec label="ACABADO DE CABINA"      value={q.cabin_finish} />
+                <Spec label="PISO DE CABINA"         value={q.cabin_floor} alt />
+                <Spec label="PLAFÓN / COP"           value={q.cop_model} />
                 {(() => {
                   try {
                     const ex: string[] = JSON.parse(q.cabin_model || '[]');
@@ -366,7 +367,6 @@ export function QuotePDFDocument({
                 <Spec label="PUERTAS DE PISO"        value={q.use_type === 'Pasajeros' ? 'Acero Inoxidable (INOX)' : 'Pintura Epóxica Industrial'} alt />
                 <Spec label="PUERTAS DE CABINA"      value={q.use_type === 'Pasajeros' ? 'Acero Inoxidable (INOX)' : 'Pintura Epóxica Industrial'} />
                 <Spec label="NOMENCLATURA"           value={generateFloorNomenclature(q.stops)} alt />
-                <Spec label="NORMATIVA"              value={q.norm} />
               </View>
             </View>
 
@@ -432,11 +432,11 @@ export function QuotePDFDocument({
               {/* Normativa — opcional */}
               {mostrarNormativa && (
                 <View style={S.infoBox}>
-                  <Text style={S.infoTitle}>Normativa aplicable</Text>
+                  <Text style={S.infoTitle}>Normativa aplicable — {q.norm || 'EN 81-20'}</Text>
                   <Text style={S.infoText}>
-                    Nuestros equipos cumplen con la Normativa{' '}
+                    Nuestros equipos están diseñados y fabricados bajo los requerimientos de la norma{' '}
                     <Text style={{ fontFamily: 'Helvetica-Bold' }}>{q.norm || 'EN 81-20'}</Text>{' '}
-                    europea y NOM-53 mexicana.
+                    y la normativa mexicana NOM-53.
                   </Text>
                 </View>
               )}

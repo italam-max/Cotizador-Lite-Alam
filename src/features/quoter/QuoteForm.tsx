@@ -48,13 +48,17 @@ const STEPS = [
 
 type FormData = Omit<Quote, 'id' | 'created_at' | 'updated_at'>;
 
-// ── Opciones de puertas según modelo / lado ─────────────────
-function getDoorTypeOptions(model: string, doorSide: string) {
-  if (model === 'MRL-L') {
-    if (doorSide === 'Derecha')   return ['Automática Apertura Derecha', 'Manual Batiente Derecha'];
-    if (doorSide === 'Izquierda') return ['Automática Apertura Izquierda', 'Manual Batiente Izquierda'];
-  }
-  return ['Automática Central', 'Telescópica Lateral', 'Manual Batiente'];
+// ── Tipos de puertas Alamex ──────────────────────────────────
+// 3 variantes estándar: Central, Derecha, Izquierda
+const DOOR_TYPES: string[] = [
+  'Automática Central',
+  'Automática Apertura Derecha',
+  'Automática Apertura Izquierda',
+];
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function getDoorTypeOptions(_model: string, _doorSide: string): string[] {
+  return DOOR_TYPES;
 }
 
 // ── Sub-componentes UI ──────────────────────────────────────
@@ -351,9 +355,9 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
   const fmt    = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
   const total  = (form.price || 0) * (form.quantity || 1);
 
-  // Ajuste 7: estado siempre "Enviada" al guardar (Por Enviar)
   const handleSave = async () => {
-    if (errors.length > 0) { setStep(2); return; }
+    // Solo bloquea si falta el nombre del cliente — el resto son advertencias que no impiden guardar
+    if (errors.some(e => e.field === 'client_name')) { setStep(1); return; }
     setSaving(true);
     try {
       // cabin_model guarda el JSON array de extras (["espejo-trasero","led-premium",...])
@@ -433,15 +437,21 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
 
         {/* Guardar */}
         <div className="flex items-center gap-3">
-          {errors.length > 0 && (
+          {errors.some(e => e.field === 'client_name') && (
             <div className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold bg-red-50 border border-red-200 text-red-600">
               <AlertTriangle size={13} />
-              {errors.length} error{errors.length > 1 ? 'es' : ''} en Paso 2
+              Nombre del cliente requerido
             </div>
           )}
-          <button onClick={handleSave} disabled={saving || errors.length > 0}
+          {warnings.length > 0 && !errors.some(e => e.field === 'client_name') && (
+            <div className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold bg-amber-50 border border-amber-200 text-amber-600">
+              <AlertTriangle size={13} />
+              {warnings.length} advertencia{warnings.length > 1 ? 's' : ''}
+            </div>
+          )}
+          <button onClick={handleSave} disabled={saving || errors.some(e => e.field === 'client_name')}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black uppercase tracking-wide transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{ background: errors.length > 0 ? '#e2e8f0' : '#0A2463', color: errors.length > 0 ? '#94a3b8' : 'white', fontFamily: "'Syne', sans-serif" }}>
+            style={{ background: errors.some(e => e.field === 'client_name') ? '#e2e8f0' : '#0A2463', color: errors.some(e => e.field === 'client_name') ? '#94a3b8' : 'white', fontFamily: "'Syne', sans-serif" }}>
             {saving ? <Loader2 size={15} className="animate-spin" /> : <Eye size={15} />}
             {saving ? 'Guardando...' : 'Guardar y ver PDF'}
           </button>
@@ -779,22 +789,24 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
                   </Field>
                 </div>
 
-                {/* Automáticos — solo informativo */}
-                <div className="mt-4 p-4 rounded-xl bg-[#0A2463]/5 border border-[#0A2463]/10">
-                  <p className="text-[10px] font-black text-[#0A2463]/50 uppercase tracking-widest mb-3">
-                    Generado automáticamente
+                {/* Especificaciones calculadas — editables por el vendedor */}
+                <div className="mt-4 p-4 rounded-xl bg-[#0A2463]/4 border border-[#0A2463]/10">
+                  <p className="text-[10px] font-black text-[#0A2463]/50 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                    <Info size={10} /> Calculado automáticamente — editable
                   </p>
                   <div className="grid grid-cols-2 gap-3">
+                    <Field label="Sistema de tracción" hint="Auto por modelo">
+                      <input className={INPUT} value={form.traction || ''}
+                        onChange={e => update({ traction: e.target.value })}
+                        placeholder={autoTractionLabel(form.model, String(form.speed))} />
+                    </Field>
+                    <Field label="Botoneras COP / LOP" hint="Editable">
+                      <input className={INPUT} value={form.control_group || ''}
+                        onChange={e => update({ control_group: e.target.value })}
+                        placeholder="Punto Matriz" />
+                    </Field>
                     <div>
-                      <p className="text-[10px] font-bold text-[#0A2463]/50 uppercase mb-1">Botoneras COP/LOP</p>
-                      <p className="text-xs font-semibold text-[#0A2463]">Punto Matriz (estándar)</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold text-[#0A2463]/50 uppercase mb-1">Sistema de tracción</p>
-                      <p className="text-xs font-semibold text-[#0A2463]">{autoTractionLabel(form.model, String(form.speed))}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold text-[#0A2463]/50 uppercase mb-1">Rieles Cabina / Contrapeso</p>
+                      <p className="text-[10px] font-bold text-[#0A2463]/50 uppercase mb-1">Rieles cabina / contrapeso</p>
                       <p className="text-xs font-semibold text-[#0A2463]">{autoRails(form.model).cabin} / {autoRails(form.model).counterweight}</p>
                     </div>
                     <div>

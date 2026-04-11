@@ -160,9 +160,9 @@ export const computeDefaults = (current: Partial<Omit<Quote, 'id'|'created'|'upd
     if (!current.shaft_depth  || current.shaft_depth  < shaftRule.minDepth)  out.shaft_depth  = shaftRule.minDepth;
   }
 
-  // 7. Tracción y control de grupo
-  out.traction      = autoTraction(model);
-  out.control_group = autoControlGroup(qty);
+  // 7. Tracción — solo se auto-calcula si el campo está vacío o si el modelo cambió
+  // control_group se usa ahora para tipo de botonera (editable por vendedor, no se auto-sobreescribe)
+  out.traction = autoTraction(model);
 
   // 8. Lado de apertura
   if (model === 'MRL-L' && (!current.door_side || current.door_side === 'N/A')) {

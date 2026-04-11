@@ -15,7 +15,7 @@ export const EMPTY_QUOTE: FormQuote = {
   quantity: 1, capacity: 630, persons: 8, speed: '1.6',
   stops: 6, travel: 15000, overhead: 3800, pit: 1300,
   shaft_width: 1800, shaft_depth: 1800, shaft_type: 'Concreto',
-  control_group: 'Simplex', traction: 'Bandas Planas (STM)',
+  control_group: 'Punto Matriz', traction: 'Bandas Planas (STM)',
   door_type: 'Automática Central', door_width: 1000, door_height: 2100,
   door_side: 'N/A', cabin_model: 'ASC', cabin_finish: 'Inox Satinado 304',
   cabin_floor: 'Granito', cop_model: 'Display Inteligente', norm: 'EN 81-20',
