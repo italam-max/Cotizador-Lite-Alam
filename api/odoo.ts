@@ -54,12 +54,17 @@ async function call(model: string, method: string, args: unknown[], kwargs: Reco
   const text = await res.text();
   if (!text) throw new Error(`Odoo devolvio respuesta vacia (HTTP ${res.status})`);
 
+  // Log del XML crudo (primeros 600 chars) — visible en Vercel Function Logs
+  console.log(`[odoo] ${model}.${method} raw:`, text.substring(0, 600));
+
   // Detectar fault XML-RPC
   if (text.includes('<fault>')) {
     const faultStr = text.match(/<name>faultString<\/name>\s*<value><string>([\s\S]*?)<\/string>/)?.[1]
       ?? text.match(/<string>([\s\S]*?)<\/string>/)?.[1]
       ?? 'Error Odoo desconocido';
-    const faultCode = text.match(/<name>faultCode<\/name>\s*<value><int>([\s\S]*?)<\/int>/)?.[1] ?? '?';
+    const faultCode = text.match(/<name>faultCode<\/name>\s*<value><int>([\s\S]*?)<\/int>/)?.[1]
+      ?? text.match(/<name>faultCode<\/name>\s*<value><i4>([\s\S]*?)<\/i4>/)?.[1]
+      ?? '?';
     throw new Error(
       `[Odoo fault code=${faultCode}] ${faultStr}`
         .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
@@ -68,19 +73,49 @@ async function call(model: string, method: string, args: unknown[], kwargs: Reco
   }
 
   const result = extractResult(text);
-  // Log para debug en Vercel (visible en Function Logs)
-  console.log(`[odoo] ${model}.${method} →`, JSON.stringify(result)?.substring(0, 120));
+  console.log(`[odoo] ${model}.${method} parsed →`, JSON.stringify(result)?.substring(0, 120));
+
+  // Si no se pudo parsear, exponer el XML crudo para diagnóstico en el modal de error
+  if (result === null && text.includes('<methodResponse>')) {
+    throw new Error(
+      `extractResult devolvió null.\nXML recibido (primeros 400 chars):\n${text.substring(0, 400)}`
+    );
+  }
+
   return result;
 }
 
 function extractResult(xml: string): unknown {
-  // Extraer el bloque <params>...</params> completo y tomar el primer <param>
-  const paramsBlock = xml.match(/<params>([\s\S]*?)<\/params>/)?.[1] ?? '';
-  const paramBlock  = paramsBlock.match(/<param>([\s\S]*?)<\/param>/)?.[1] ?? '';
-  // Tomar el <value> de ese param — capturamos TODO el contenido incluyendo nested tags
-  const valueBlock  = paramBlock.match(/<value>([\s\S]*)<\/value>/)?.[1] ?? '';
-  if (!valueBlock.trim()) return null;
-  return parseValue(valueBlock.trim());
+  // Estrategia: ubicar el <value> raíz dentro del primer <param> del methodResponse.
+  // Usamos indexOf/lastIndexOf para no depender de regex greedy/lazy que falla
+  // según si el resultado es un int simple o un struct/array anidado.
+
+  const startTag = '<methodResponse>';
+  const mStart = xml.indexOf(startTag);
+  if (mStart === -1) return null;
+
+  // Buscar el primer <value> después de <methodResponse><params><param>
+  const vOpen = xml.indexOf('<value>', mStart);
+  if (vOpen === -1) return null;
+
+  // Encontrar el </value> de cierre que corresponde a este <value> abierto
+  // Hacemos balance de tags manualmente
+  let depth = 0;
+  let i = vOpen;
+  const len = xml.length;
+  while (i < len) {
+    if (xml.startsWith('<value>', i)) { depth++; i += 7; continue; }
+    if (xml.startsWith('</value>', i)) {
+      depth--;
+      if (depth === 0) {
+        const inner = xml.slice(vOpen + 7, i).trim();
+        return parseValue(inner);
+      }
+      i += 8; continue;
+    }
+    i++;
+  }
+  return null;
 }
 
 function parseValue(s: string): unknown {
