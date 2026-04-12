@@ -47,15 +47,30 @@ async function call(model: string, method: string, args: unknown[], kwargs: Reco
 
   const res = await fetch(`${ODOO_URL}/xmlrpc/2/object`, {
     method:  'POST',
-    headers: { 'Content-Type': 'text/xml; charset=utf-8' },
-    body:    xml,
+    headers: {
+      'Content-Type': 'text/xml; charset=utf-8',
+      'Accept':       'text/xml, application/xml',
+      'User-Agent':   'OdooRPC/14.0 (compatible; Alamex-Cotizador/1.0)',
+    },
+    body: xml,
   });
 
   const text = await res.text();
   if (!text) throw new Error(`Odoo devolvio respuesta vacia (HTTP ${res.status})`);
 
-  // Log del XML crudo (primeros 600 chars) — visible en Vercel Function Logs
-  console.log(`[odoo] ${model}.${method} raw:`, text.substring(0, 600));
+  // Log del XML crudo (primeros 300 chars) — visible en Vercel Function Logs
+  console.log(`[odoo] ${model}.${method} raw:`, text.substring(0, 300));
+
+  // Detectar Cloudflare u otros WAF/proxies que devuelven HTML en lugar de XML
+  const isHtml = text.trimStart().startsWith('<!') || text.trimStart().startsWith('<html');
+  if (isHtml) {
+    const isCloudflare = text.includes('cloudflare') || text.includes('Just a moment') || text.includes('cf-ray');
+    throw new Error(
+      isCloudflare
+        ? `CLOUDFLARE BLOQUEANDO XML-RPC\n\nEl Odoo de producción está protegido por Cloudflare y está rechazando las peticiones automáticas desde Vercel.\n\nSOLUCIÓN: En el panel de Cloudflare, crea una regla WAF que permita pasar las peticiones a /xmlrpc/2/ sin challenge, o agrega las IPs de Vercel a la allowlist.\n\nAlternativamente: desactiva el proxy naranja (☁) de Cloudflare para el dominio de Odoo.`
+        : `El servidor devolvió HTML en lugar de XML (HTTP ${res.status}). Posible WAF, proxy o página de error.\nPrimeros 200 chars:\n${text.substring(0, 200)}`
+    );
+  }
 
   // Detectar fault XML-RPC
   if (text.includes('<fault>')) {
