@@ -75,12 +75,35 @@ async function createCRMLead(params: {
     expected_revenue: params.revenue,
     description:      params.description,
     type:             'opportunity',
-    priority:         0,             // int (no string) — 0=Normal, 1=Baja, 2=Alta, 3=Muy Alta
-    stage_id:         1,             // Primera etapa del pipeline (Nuevo / Calificación)
+    priority:         0,    // 0=Normal — int requerido por XML-RPC
+    stage_id:         1,    // Primera etapa del pipeline
+    user_id:          1,    // OdooBot como vendedor asignado
+    team_id:          14,   // Equipo: Ventas de Proyectos
   }]);
 
   const id = Number(result);
   if (!id || isNaN(id)) throw new Error(`Odoo devolvió un ID inválido: ${JSON.stringify(result)}`);
+
+  // Crear actividad de seguimiento para el usuario 112 con vencimiento en 3 días
+  const deadline = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 3);
+    return d.toISOString().split('T')[0]; // YYYY-MM-DD
+  })();
+
+  try {
+    await callOdoo('crm.lead', 'activity_schedule', [[id]], {
+      activity_type_id: 4,   // Tipo "Tarea / To-Do" (estándar Odoo)
+      summary:          'Nueva oportunidad creada desde Cotizador Alamex',
+      note:             `<p>Oportunidad <strong>${params.folio}</strong> registrada automáticamente desde el Cotizador Alamex. Revisar y dar seguimiento.</p>`,
+      user_id:          112, // Usuario responsable de seguimiento
+      date_deadline:    deadline,
+    });
+  } catch (actErr) {
+    // La actividad es secundaria — no cancela la creación del lead
+    console.warn('[odoo] activity_schedule falló (no crítico):', (actErr as Error).message);
+  }
+
   return id;
 }
 
