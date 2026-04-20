@@ -64,15 +64,19 @@ function getDoorTypeOptions(_model: string, _doorSide: string): string[] {
 // ── Sub-componentes UI ──────────────────────────────────────
 function SectionCard({ title, icon: Icon, note, children }: { title: string; icon?: any; note?: string; children: React.ReactNode }) {
   return (
-    <div className="luxury-glass rounded-2xl p-6 border border-[#D4AF37]/10 shadow-sm">
-      <div className="flex items-center justify-between mb-5">
-        <h3 className="text-xs font-black text-[#0A2463] uppercase tracking-[0.15em] flex items-center gap-2">
-          {Icon && <Icon size={14} className="text-[#D4AF37]" />}
+    <div className="bg-white rounded-2xl border border-[#0A2463]/8 shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-[#0A2463]/6 bg-[#F9F7F2]/60">
+        <h3 className="text-sm font-bold text-[#0A2463] flex items-center gap-2.5">
+          {Icon && (
+            <span className="w-7 h-7 rounded-lg bg-[#0A2463]/6 flex items-center justify-center shrink-0">
+              <Icon size={14} className="text-[#0A2463]/70" />
+            </span>
+          )}
           {title}
         </h3>
-        {note && <span className="text-[10px] text-[#0A2463]/40 italic">{note}</span>}
+        {note && <span className="text-xs text-[#0A2463]/40 font-medium">{note}</span>}
       </div>
-      {children}
+      <div className="p-6">{children}</div>
     </div>
   );
 }
@@ -80,9 +84,9 @@ function SectionCard({ title, icon: Icon, note, children }: { title: string; ico
 function Field({ label, hint, children, col }: { label: string; hint?: string; children: React.ReactNode; col?: string }) {
   return (
     <div className={col}>
-      <label className="flex items-center justify-between mb-1.5">
-        <span className="text-[11px] font-bold text-[#0A2463]/70 uppercase tracking-wider">{label}</span>
-        {hint && <span className="text-[10px] text-[#D4AF37]/70 font-medium">{hint}</span>}
+      <label className="flex items-center justify-between mb-2">
+        <span className="text-[13px] font-semibold text-[#0A2463]/65">{label}</span>
+        {hint && <span className="text-xs text-[#D4AF37] font-semibold">{hint}</span>}
       </label>
       {children}
     </div>
@@ -107,7 +111,9 @@ function PDFPreviewModal({
   const [downloading, setDownloading] = useState(false);
   const [sending,     setSending]     = useState(false);
   const fmt = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
-  const total = (quote.price || 0) * (quote.quantity || 1);
+  const isPricePerSystem = quote.system_type && quote.system_type !== 'Simplex';
+  const elevatorTotal = isPricePerSystem ? (quote.price || 0) : (quote.price || 0) * (quote.quantity || 1);
+  const total = elevatorTotal + (quote.labor_price || 0);
   const isMRL = quote.model.includes('MRL');
 
   const handleDownload = async () => {
@@ -123,7 +129,7 @@ function PDFPreviewModal({
       const contentBlob = await pdf(element as any).toBlob();
       const { mergeAndDownload } = await import('../../services/pdfMerge');
       const filename = `${quote.folio}_${quote.client_name}.pdf`.replace(/\s+/g, '_');
-      await mergeAndDownload(contentBlob, quote.folio, quote.client_name, filename);
+      await mergeAndDownload(contentBlob, quote.folio, quote.client_name, filename, quote.installation_city);
     } catch (e: any) {
       console.error(e);
       onToastError?.(e?.message || 'Error al generar el PDF. Intenta de nuevo.');
@@ -352,8 +358,10 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
   const doorTypeOptions = getDoorTypeOptions(form.model, form.door_side || 'N/A');
   const isMRL  = form.model.includes('MRL');
   const isHyd  = form.model === 'HYD' || form.model === 'Home Lift';
-  const fmt    = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
-  const total  = (form.price || 0) * (form.quantity || 1);
+  const fmt           = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
+  const isPricePerSystem = form.system_type && form.system_type !== 'Simplex';
+  const elevatorTotal    = isPricePerSystem ? (form.price || 0) : (form.price || 0) * (form.quantity || 1);
+  const total            = elevatorTotal + (form.labor_price || 0);
 
   const handleSave = async () => {
     // Solo bloquea si falta el nombre del cliente — el resto son advertencias que no impiden guardar
@@ -403,64 +411,79 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
       <div className="ambient-light-bg opacity-40" />
 
       {/* HEADER */}
-      <div className="relative z-10 px-6 py-4 shrink-0 flex items-center justify-between bg-white/60 backdrop-blur-md border-b border-[#D4AF37]/20 shadow-sm">
-        <div className="flex items-center gap-3">
-          <button onClick={onCancel} className="p-2 rounded-xl text-[#0A2463]/50 hover:text-[#0A2463] hover:bg-[#0A2463]/5 transition-all">
-            <ArrowLeft size={18} />
-          </button>
-          <div>
-            <h1 className="text-lg font-black text-[#0A2463] flex items-center gap-2" style={{ fontFamily: "'Syne', sans-serif" }}>
-              <Sparkles size={16} className="text-[#D4AF37]" />
-              {quote ? `Editando ${form.folio}` : 'Nueva Cotización'}
-            </h1>
-            <p className="text-[11px] text-[#0A2463]/50 mt-0.5 font-medium">
-              {form.client_name || 'Sin cliente'} · {form.model} · {form.capacity} kg · {form.stops} paradas
-            </p>
+      {/* ── Barra superior: 2 filas en mobile, 1 fila en desktop ── */}
+      <div className="relative z-10 shrink-0 bg-white/60 backdrop-blur-md border-b border-[#D4AF37]/20 shadow-sm">
+        {/* Fila 1: título + guardar */}
+        <div className="px-3 sm:px-6 py-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <button onClick={onCancel} className="p-2 rounded-xl text-[#0A2463]/50 hover:text-[#0A2463] hover:bg-[#0A2463]/5 transition-all shrink-0">
+              <ArrowLeft size={16} />
+            </button>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-xl font-black text-[#0A2463] flex items-center gap-1.5 truncate" style={{ fontFamily: "'Syne', sans-serif" }}>
+                <Sparkles size={14} className="text-[#D4AF37] shrink-0" />
+                <span className="truncate">{quote ? `Editando ${form.folio}` : 'Nueva Cotización'}</span>
+              </h1>
+              <p className="text-xs text-[#0A2463]/50 font-medium truncate hidden sm:block">
+                {form.client_name || 'Sin cliente'} · {form.model} · {form.capacity} kg · {form.stops} paradas
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {errors.some(e => e.field === 'client_name') && (
+              <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-red-50 border border-red-200 text-red-600">
+                <AlertTriangle size={12} /> Nombre requerido
+              </div>
+            )}
+            {warnings.length > 0 && !errors.some(e => e.field === 'client_name') && (
+              <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-50 border border-amber-200 text-amber-600">
+                <AlertTriangle size={12} /> {warnings.length} aviso{warnings.length > 1 ? 's' : ''}
+              </div>
+            )}
+            <button
+              onClick={handleSave}
+              disabled={saving || errors.some(e => e.field === 'client_name')}
+              className="flex items-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-black uppercase tracking-wide transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{
+                background: errors.some(e => e.field === 'client_name') ? '#e2e8f0' : '#0A2463',
+                color: errors.some(e => e.field === 'client_name') ? '#94a3b8' : 'white',
+                fontFamily: "'Syne', sans-serif",
+              }}>
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />}
+              <span className="hidden sm:inline">{saving ? 'Guardando...' : 'Guardar y ver PDF'}</span>
+              <span className="sm:hidden">{saving ? '...' : 'Guardar'}</span>
+            </button>
           </div>
         </div>
 
-        {/* Steps */}
-        <div className="flex items-center gap-1 bg-[#0A2463]/5 rounded-xl p-1">
-          {STEPS.map(s => {
-            const active = step === s.id;
-            const done   = step > s.id;
-            return (
-              <button key={s.id} onClick={() => setStep(s.id)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all"
-                style={{ background: active ? '#0A2463' : 'transparent', color: active ? 'white' : done ? '#0A2463' : '#94a3b8' }}>
-                {done ? <CheckCircle2 size={13} className="text-[#D4AF37]" /> : <s.icon size={13} />}
-                {s.label}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Guardar */}
-        <div className="flex items-center gap-3">
-          {errors.some(e => e.field === 'client_name') && (
-            <div className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold bg-red-50 border border-red-200 text-red-600">
-              <AlertTriangle size={13} />
-              Nombre del cliente requerido
-            </div>
-          )}
-          {warnings.length > 0 && !errors.some(e => e.field === 'client_name') && (
-            <div className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold bg-amber-50 border border-amber-200 text-amber-600">
-              <AlertTriangle size={13} />
-              {warnings.length} advertencia{warnings.length > 1 ? 's' : ''}
-            </div>
-          )}
-          <button onClick={handleSave} disabled={saving || errors.some(e => e.field === 'client_name')}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black uppercase tracking-wide transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{ background: errors.some(e => e.field === 'client_name') ? '#e2e8f0' : '#0A2463', color: errors.some(e => e.field === 'client_name') ? '#94a3b8' : 'white', fontFamily: "'Syne', sans-serif" }}>
-            {saving ? <Loader2 size={15} className="animate-spin" /> : <Eye size={15} />}
-            {saving ? 'Guardando...' : 'Guardar y ver PDF'}
-          </button>
+        {/* Fila 2: Steps — siempre centrados */}
+        <div className="px-3 sm:px-6 pb-2 flex justify-center sm:justify-start">
+          <div className="flex items-center gap-1 bg-[#0A2463]/5 rounded-xl p-1">
+            {STEPS.map(s => {
+              const active = step === s.id;
+              const done   = step > s.id;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => setStep(s.id)}
+                  className="flex items-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-lg text-sm font-semibold transition-all"
+                  style={{
+                    background: active ? '#0A2463' : 'transparent',
+                    color: active ? 'white' : done ? '#0A2463' : '#94a3b8',
+                  }}>
+                  {done ? <CheckCircle2 size={13} className="text-[#D4AF37]" /> : <s.icon size={13} />}
+                  <span>{s.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
       {/* CUERPO */}
-      <div className="flex-1 overflow-y-auto relative z-10 px-6 py-6">
-        <div className="max-w-3xl mx-auto space-y-5">
+      <div className="flex-1 overflow-y-auto relative z-10 px-3 sm:px-6 py-4 sm:py-6">
+        <div className="max-w-3xl mx-auto space-y-4 sm:space-y-5">
 
           {/* ════ PASO 1 ════ */}
           {step === 1 && (
@@ -484,6 +507,13 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
                       onChange={e => update({ client_phone: e.target.value })}
                       placeholder="+52 55 0000 0000" />
                   </Field>
+                  <div className="md:col-span-2">
+                    <Field label="Ciudad / Lugar de instalación" hint="Aparece en el PDF">
+                      <input className={INPUT} value={form.installation_city || ''}
+                        onChange={e => update({ installation_city: e.target.value })}
+                        placeholder="Ciudad de México, CDMX" />
+                    </Field>
+                  </div>
                   <Field label="Folio">
                     <input className={INPUT_RO + ' font-black text-[#D4AF37]'} value={form.folio} readOnly />
                   </Field>
@@ -571,7 +601,7 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
 
               {/* Parámetros */}
               <SectionCard title="Parámetros principales">
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
                   <Field label="Capacidad" hint={`${CAPACITY_PERSONS[form.capacity] ?? '?'} personas`}>
                     <select className={sc('capacity')} value={form.capacity}
                       onChange={e => update({ capacity: Number(e.target.value) })}>
@@ -592,7 +622,15 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
                     <input type="number" min="1" max="20" className={ic('quantity')}
                       value={form.quantity} onChange={e => update({ quantity: Number(e.target.value) })} />
                   </Field>
-                  {/* Ajuste 1: Tracción siempre Cable de Acero — solo informativo */}
+                  <Field label="Tipo de sistema" hint="Define el precio">
+                    <select className={SELECT} value={form.system_type || 'Simplex'}
+                      onChange={e => update({ system_type: e.target.value })}>
+                      {['Simplex','Duplex','Triplex','Cuádruple','Quíntuple','Sextuple'].map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  {/* Tracción siempre Cable de Acero — solo informativo */}
                   <Field label="Tracción" hint="Automático">
                     <input className={INPUT_RO} value="Cable de Acero" readOnly
                       title="La especificación exacta se define en la guía mecánica" />
@@ -694,8 +732,8 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
                   {/* ── EXTRAS DE CABINA ── */}
                   <div className="col-span-2">
                     <label className="flex items-center justify-between mb-3">
-                      <span className="text-[11px] font-bold text-[#0A2463]/70 uppercase tracking-wider">Extras de cabina</span>
-                      <span className="text-[10px] text-[#0A2463]/40 italic">Selecciona los que apliquen</span>
+                      <span className="text-[13px] font-semibold text-[#0A2463]/65">Extras de cabina</span>
+                      <span className="text-xs text-[#0A2463]/40 font-medium">Selecciona los que apliquen</span>
                     </label>
                     <div className="grid grid-cols-2 gap-2">
                       {CABIN_EXTRAS.filter(e => (e.use as readonly string[]).includes(form.use_type || 'Pasajeros')).map(extra => {
@@ -752,11 +790,11 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
                   {/* ── CONFIGURADOR VISUAL DE CABINA ── */}
                   <div className="col-span-2">
                     <label className="flex items-center justify-between mb-3">
-                      <span className="text-[11px] font-bold text-[#0A2463]/70 uppercase tracking-wider">
+                      <span className="text-[13px] font-semibold text-[#0A2463]/65">
                         Vista de cabina configurada
                       </span>
-                      <span className="text-[10px] text-[#D4AF37]/70 italic">
-                        {cabinImage ? '✓ Imagen capturada para el PDF' : 'Captura la imagen para incluirla en la propuesta'}
+                      <span className="text-xs text-[#D4AF37] font-semibold">
+                        {cabinImage ? '✓ Capturada' : 'Captura para el PDF'}
                       </span>
                     </label>
                     <CabinConfigurator
@@ -791,8 +829,8 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
 
                 {/* Especificaciones técnicas editables */}
                 <div className="mt-4 p-4 rounded-xl bg-[#0A2463]/4 border border-[#0A2463]/10">
-                  <p className="text-[10px] font-black text-[#0A2463]/50 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                    <Info size={10} /> Especificaciones técnicas — editables
+                  <p className="text-xs font-semibold text-[#0A2463]/50 mb-3 flex items-center gap-1.5">
+                    <Info size={11} /> Especificaciones técnicas editables
                   </p>
                   <div className="grid grid-cols-2 gap-3">
                     <Field label="Botoneras COP / LOP" hint="Editable">
@@ -875,7 +913,7 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
               <SectionCard title="Precio de venta" icon={DollarSign}>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
-                    <Field label="Precio unitario (MXN sin IVA)">
+                    <Field label={isPricePerSystem ? `Precio del sistema ${form.system_type} (sin IVA)` : 'Precio unitario (sin IVA)'}>
                       <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-[#D4AF37] text-base">$</span>
                         <input type="number" min="0" step="1000"
@@ -891,24 +929,71 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
                       <option value="USD">USD — Dólar</option>
                     </select>
                   </Field>
-                  {/* Ajuste 7: estado informativo — siempre se guarda como "Enviada" */}
                   <Field label="Estado al guardar">
                     <input className={INPUT_RO + ' text-blue-700 font-semibold'} value="Enviada (automático)" readOnly />
                   </Field>
+
+                </div>
+
+                {/* Mano de obra — opcional */}
+                <div className="mt-4 space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => update({ labor_price: form.labor_price != null ? null : 0 })}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all text-left"
+                    style={{
+                      borderColor: form.labor_price != null ? '#0A2463' : '#e2e8f0',
+                      background:  form.labor_price != null ? '#0A2463' : 'white',
+                    }}>
+                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${form.labor_price != null ? 'bg-[#D4AF37] border-[#D4AF37]' : 'bg-white border-[#0A2463]/20'}`}>
+                      {form.labor_price != null && <CheckCircle2 size={13} className="text-[#0A2463]" />}
+                    </div>
+                    <div>
+                      <p className={`text-xs font-black uppercase tracking-wide ${form.labor_price != null ? 'text-[#D4AF37]' : 'text-[#0A2463]/60'}`}>
+                        Mano de obra (opcional)
+                      </p>
+                      <p className={`text-[11px] mt-0.5 ${form.labor_price != null ? 'text-white/60' : 'text-[#0A2463]/40'}`}>
+                        Agregar costo de instalación / mano de obra separado al precio del equipo
+                      </p>
+                    </div>
+                  </button>
+
+                  {form.labor_price != null && (
+                    <div>
+                      <Field label="Costo de mano de obra (sin IVA)">
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-[#D4AF37] text-base">$</span>
+                          <input type="number" min="0" step="1000"
+                            className={INPUT + ' pl-8 text-lg font-black text-[#0A2463]'}
+                            value={form.labor_price || ''} onChange={e => update({ labor_price: Number(e.target.value) })}
+                            placeholder="0" />
+                        </div>
+                      </Field>
+                    </div>
+                  )}
                 </div>
 
                 {form.price > 0 && (
-                  <div className="mt-5 p-5 rounded-xl flex items-center justify-between"
+                  <div className="mt-5 p-5 rounded-xl space-y-2"
                     style={{ background: '#0A2463' }}>
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#D4AF37] mb-1">
-                        Total — {form.quantity} equipo{form.quantity > 1 ? 's' : ''}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#D4AF37] mb-1">
+                          {isPricePerSystem
+                            ? `Sistema ${form.system_type} — precio completo`
+                            : `Equipos — ${form.quantity} unidad${form.quantity > 1 ? 'es' : ''}`}
+                        </p>
+                        {form.labor_price != null && form.labor_price > 0 && (
+                          <p className="text-[10px] text-white/50">
+                            Equipo: {fmt.format(elevatorTotal)} · M.O.: {fmt.format(form.labor_price)}
+                          </p>
+                        )}
+                        <p className="text-xs text-white/40">Con IVA: {fmt.format(total * 1.16)}</p>
+                      </div>
+                      <p className="font-black text-3xl text-[#D4AF37]" style={{ fontFamily: "'Syne', sans-serif" }}>
+                        {fmt.format(total)}
                       </p>
-                      <p className="text-xs text-white/40">Con IVA: {fmt.format(total * 1.16)}</p>
                     </div>
-                    <p className="font-black text-3xl text-[#D4AF37]" style={{ fontFamily: "'Syne', sans-serif" }}>
-                      {fmt.format(total)}
-                    </p>
                   </div>
                 )}
               </SectionCard>
@@ -971,7 +1056,7 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
       </div>
 
       {/* NAV INFERIOR */}
-      <div className="relative z-10 px-6 py-4 shrink-0 flex items-center justify-between bg-white/60 backdrop-blur-md border-t border-[#D4AF37]/20">
+      <div className="relative z-10 px-3 sm:px-6 py-3 sm:py-4 shrink-0 flex items-center justify-between bg-white/60 backdrop-blur-md border-t border-[#D4AF37]/20">
         <button onClick={() => step > 1 ? setStep(s => s - 1) : onCancel()}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-[#0A2463]/60 hover:text-[#0A2463] hover:bg-[#0A2463]/5 transition-all">
           <ArrowLeft size={16} />

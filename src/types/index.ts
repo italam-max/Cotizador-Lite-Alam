@@ -19,7 +19,8 @@ export const EMPTY_QUOTE: FormQuote = {
   door_type: 'Automática Central', door_width: 1000, door_height: 2100,
   door_side: 'N/A', cabin_model: 'ASC', cabin_finish: 'Inox Satinado 304',
   cabin_floor: 'Granito', cop_model: 'Display Inteligente', norm: 'EN 81-20',
-  price: 0, currency: 'MXN', internal_notes: '',
+  price: 0, currency: 'MXN', system_type: 'Simplex', labor_price: null, installation_city: '',
+  internal_notes: '',
   commercial_terms: {
     paymentMethod: '50% Anticipo a la firma del Contrato\n25% Al aviso de embarque\n20% Al aviso de entrega del equipo en obra\n05% Al aviso de entrega en funcionamiento',
     deliveryTime: 'A confirmar tras anticipo',

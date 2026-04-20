@@ -155,7 +155,18 @@ CREATE POLICY "Authenticated users can insert history"
   ON public.quote_history FOR INSERT
   TO authenticated WITH CHECK (true);
 
--- ─── 5. VERIFICACIÓN ────────────────────────────────────────
+-- ─── 5. COLUMNAS ADICIONALES (v2 — ejecutar si la tabla ya existe) ──────────
+-- Ciudad / lugar de instalación
+ALTER TABLE public.quotes ADD COLUMN IF NOT EXISTS installation_city TEXT;
+-- Precio de mano de obra (opcional, null = no aplica)
+ALTER TABLE public.quotes ADD COLUMN IF NOT EXISTS labor_price NUMERIC;
+-- Tipo de sistema: Simplex, Duplex, Triplex, etc. (null = Simplex por defecto)
+-- Cuando es distinto de Simplex, el precio capturado es del sistema completo (no se multiplica por cantidad)
+ALTER TABLE public.quotes ADD COLUMN IF NOT EXISTS system_type TEXT DEFAULT 'Simplex';
+-- Opciones de PDF (seguridades visibles, extras, etc.)
+ALTER TABLE public.quotes ADD COLUMN IF NOT EXISTS pdf_options JSONB;
+
+-- ─── 6. VERIFICACIÓN ────────────────────────────────────────
 -- Corre esto para confirmar que todo quedó bien:
 -- SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';
 -- SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'quotes' ORDER BY ordinal_position;

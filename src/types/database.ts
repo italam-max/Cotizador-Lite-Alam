@@ -63,10 +63,13 @@ export interface Quote {
   cabin_floor:      string | null;
   cop_model:        string | null;
   norm:             string;
-  price:            number;
-  currency:         Currency;
-  internal_notes:   string | null;
-  commercial_terms: CommercialTerms | null;
+  price:             number;
+  currency:          Currency;
+  system_type:       string | null;
+  labor_price:       number | null;
+  installation_city: string | null;
+  internal_notes:    string | null;
+  commercial_terms:  CommercialTerms | null;
   pdf_options?: Record<string, any> | null;
 }
 

@@ -4,9 +4,10 @@ export async function mergeAndDownload(
   contentBlob: Blob,
   folio: string,
   clientName: string,
-  filename: string
+  filename: string,
+  installationCity?: string | null
 ): Promise<void> {
-  const finalBlob = await mergePDFs(contentBlob, folio, clientName);
+  const finalBlob = await mergePDFs(contentBlob, folio, clientName, installationCity);
   const url = URL.createObjectURL(finalBlob);
   const a   = document.createElement('a');
   a.href = url; a.download = filename; a.click();
@@ -14,12 +15,12 @@ export async function mergeAndDownload(
 }
 
 export async function mergeToBlob(
-  contentBlob: Blob, folio: string, clientName: string
+  contentBlob: Blob, folio: string, clientName: string, installationCity?: string | null
 ): Promise<Blob> {
-  return mergePDFs(contentBlob, folio, clientName);
+  return mergePDFs(contentBlob, folio, clientName, installationCity);
 }
 
-async function mergePDFs(contentBlob: Blob, folio: string, clientName: string): Promise<Blob> {
+async function mergePDFs(contentBlob: Blob, folio: string, clientName: string, installationCity?: string | null): Promise<Blob> {
   const { PDFDocument, rgb, StandardFonts } = await import('pdf-lib');
 
   const coverRes = await fetch('/pdf/portada-alamex.pdf');
@@ -42,35 +43,36 @@ async function mergePDFs(contentBlob: Blob, folio: string, clientName: string): 
   // Banda navy visible: de pdfplumber y≈430 a y≈530 → pdf-lib y≈38 a y≈138
   const navy = rgb(13/255, 30/255, 65/255); // #0D1E41 — navy oscuro de la portada
 
-  // Cubrir TODA la banda navy donde está el texto placeholder
-  // Usamos un rectángulo grande que tape todo el área de texto
+  // Cubrir la banda navy donde va el texto de folio/cliente.
+  // Subido 25 pts respecto al layout anterior para no tapar la sección
+  // "OFICINAS CDMX / OFICINAS GDL" que queda justo debajo de la banda.
   coverPage.drawRectangle({
     x: 0,
-    y: pageH - 530,  // desde abajo: 568 - 530 = 38
+    y: pageH - 505,  // era pageH - 530; subido 25 pts
     width: 340,
-    height: 100,     // cubre de y=38 a y=138 (pdfplumber 430 a 530)
+    height: 100,
     color: navy,
   });
 
   // Línea 1 — "Propuesta FOLIO"
-  // pdfplumber top=460.3 → pdf-lib y = 568 - 471.3 = 96.7 (baseline)
   coverPage.drawText(`Propuesta  ${folio}`, {
     x: 14,
-    y: pageH - 471,  // 568 - 471 = 97
+    y: pageH - 446,  // era pageH - 471; subido 25 pts
     size: 11, font, color: rgb(1, 1, 1),
   });
 
   // Línea 2 — nombre del cliente (dorado, más grande)
   coverPage.drawText(clientName.substring(0, 45), {
     x: 14,
-    y: pageH - 490,  // 568 - 490 = 78
+    y: pageH - 465,  // era pageH - 490; subido 25 pts
     size: 13, font: fontB, color: rgb(245/255, 197/255, 24/255),
   });
 
-  // Línea 3 — fecha (gris claro)
-  coverPage.drawText(`Ciudad de México a ${today}`, {
+  // Línea 3 — ciudad + fecha (gris claro)
+  const cityLabel = (installationCity && installationCity.trim()) ? installationCity.trim() : 'Ciudad de México';
+  coverPage.drawText(`${cityLabel} a ${today}`, {
     x: 14,
-    y: pageH - 507,  // 568 - 507 = 61
+    y: pageH - 482,  // era pageH - 507; subido 25 pts
     size: 8, font, color: rgb(0.75, 0.75, 0.75),
   });
 

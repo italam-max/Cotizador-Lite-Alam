@@ -1,11 +1,15 @@
 // ARCHIVO: src/features/pdf/QuotePDF.tsx
-// PDF optimizado — 4 páginas: Cotización / Especificaciones / Puertas+Seguridades+Cabina / Condiciones
-// Cambios vs v6: eliminada Pág 5 (Cabina) que duplicaba Pág 3.
-//   Calidad y Ventajas movidos a Pág 4. Columna vacía "Mano de Obra" eliminada.
+// PDF — fuente Plus Jakarta Sans, tamaños aumentados ~1.5-2pt
 
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
 import type { Quote } from '../../types';
-import { generateFloorNomenclature, autoRails, autoTractionLabel } from '../../data/engineRules';
+import { generateFloorNomenclature, autoRails } from '../../data/engineRules';
+
+// Fuentes: Helvetica estándar (siempre disponible en @react-pdf).
+// Para usar Plus Jakarta Sans en el PDF, descarga los .ttf desde Google Fonts,
+// colócalos en /public/fonts/ y registra con Font.register({ family:'PJSans', src:'/fonts/PlusJakartaSans-Regular.ttf' }).
+const PJSans     = 'Helvetica';
+const PJSansBold = 'Helvetica-Bold';
 
 // ── PALETA ───────────────────────────────────────────────────
 const NAVY  = '#1B3A6B';
@@ -34,7 +38,7 @@ const MODEL_LABELS: Record<string, string> = {
   'Home Lift': 'Home Lift Residencial',
 };
 
-// ── SEGURIDADES Y EXTRAS (exportados para el selector de opciones) ─
+// ── SEGURIDADES Y EXTRAS ─────────────────────────────────────
 export const TODAS_SEGURIDADES = [
   'Sistema de paracaídas',
   'Sensor de carga (báscula de sobrecarga)',
@@ -67,58 +71,68 @@ export const TODOS_EXTRAS_DESC = [
 
 // ── ESTILOS ──────────────────────────────────────────────────
 const S = StyleSheet.create({
-  page:      { backgroundColor: WHITE, padding: 0, fontFamily: 'Helvetica' },
+  page:     { backgroundColor: WHITE, padding: 0, fontFamily: PJSans },
   stripTop:  { position: 'absolute', top: 0, left: 0,   width: 55,  height: 8, backgroundColor: GOLD },
   stripTop2: { position: 'absolute', top: 0, left: 55,  width: 120, height: 8, backgroundColor: NAVY },
   stripBot:  { position: 'absolute', bottom: 0, left: 0,   width: 160, height: 8, backgroundColor: GOLD },
   stripBot2: { position: 'absolute', bottom: 0, left: 160, width: 80,  height: 8, backgroundColor: NAVY },
+
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 30, paddingVertical: 12,
+    paddingHorizontal: 30, paddingVertical: 13,
     backgroundColor: WHITE, borderBottomWidth: 3, borderBottomColor: GOLD,
   },
   headerRight: { alignItems: 'flex-end' },
-  headerTitle: { fontSize: 8, color: NAVY, fontFamily: 'Helvetica-Bold', letterSpacing: 0.5 },
-  headerSub:   { fontSize: 7, color: GRAY, marginTop: 1 },
-  // paddingBottom: 44 reserva espacio para el footer absoluto (28px height) + 16px holgura
-  body:        { paddingHorizontal: 30, paddingTop: 14, paddingBottom: 44 },
+  headerTitle: { fontSize: 9.5, color: NAVY, fontFamily: PJSansBold, letterSpacing: 0.3 },
+  headerSub:   { fontSize: 8.5, color: GRAY, marginTop: 1.5 },
+
+  body: { paddingHorizontal: 30, paddingTop: 14, paddingBottom: 52 },
+
   secTitle: {
-    fontSize: 10, fontFamily: 'Helvetica-Bold', color: NAVY,
-    marginBottom: 6, marginTop: 10,
-    paddingBottom: 3, borderBottomWidth: 1, borderBottomColor: GOLD,
+    fontSize: 12, fontFamily: PJSansBold, color: NAVY,
+    marginBottom: 7, marginTop: 12,
+    paddingBottom: 4, borderBottomWidth: 1.5, borderBottomColor: GOLD,
   },
-  secNum:  { fontSize: 10, fontFamily: 'Helvetica-Bold', color: NAVY, marginBottom: 5, marginTop: 8 },
-  tblHeader: { flexDirection: 'row', backgroundColor: NAVY, minHeight: 22, alignItems: 'center' },
-  tblHCell:  { flex: 1, paddingHorizontal: 8, paddingVertical: 4, fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: WHITE },
-  tblRow:    { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#E0E0E0', minHeight: 19, alignItems: 'center' },
+  secNum: { fontSize: 11.5, fontFamily: PJSansBold, color: NAVY, marginBottom: 6, marginTop: 10 },
+
+  tblHeader: { flexDirection: 'row', backgroundColor: NAVY, minHeight: 26, alignItems: 'center' },
+  tblHCell:  { flex: 1, paddingHorizontal: 9, paddingVertical: 5, fontSize: 10, fontFamily: PJSansBold, color: WHITE },
+  tblRow:    { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#E0E0E0', minHeight: 22, alignItems: 'center' },
   tblAlt:    { backgroundColor: LGRAY },
-  tblCell:   { flex: 1, paddingHorizontal: 8, paddingVertical: 4, fontSize: 8.5, color: BLK },
-  tblBold:   { flex: 1, paddingHorizontal: 8, paddingVertical: 4, fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: BLK },
-  specRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#EBEBEB', minHeight: 19, alignItems: 'center' },
-  specKey: { width: '42%', paddingHorizontal: 7, paddingVertical: 4, fontSize: 8, fontFamily: 'Helvetica-Bold', color: NAVY, borderRightWidth: 1, borderRightColor: '#EBEBEB' },
-  specVal: { flex: 1, paddingHorizontal: 7, paddingVertical: 4, fontSize: 8, color: BLK },
-  infoBox:     { padding: 8, borderRadius: 3, marginBottom: 8, backgroundColor: '#EBF0FB', borderLeftWidth: 3, borderLeftColor: NAVY },
-  infoBoxGold: { padding: 8, borderRadius: 3, marginBottom: 8, backgroundColor: '#FFFBEB', borderLeftWidth: 3, borderLeftColor: GOLD },
-  infoTitle:   { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: NAVY, marginBottom: 3 },
-  infoText:    { fontSize: 8, color: BLK, lineHeight: 1.5 },
-  bulletRow:   { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 3 },
-  bulletDot:   { width: 4, height: 4, borderRadius: 2, backgroundColor: GOLD, marginTop: 3, marginRight: 5, flexShrink: 0 },
-  bulletText:  { fontSize: 8, color: BLK, flex: 1, lineHeight: 1.5 },
-  para:   { fontSize: 8.5, color: BLK, lineHeight: 1.5, marginBottom: 5 },
-  cols:   { flexDirection: 'row', gap: 14, marginBottom: 6 },
-  col:    { flex: 1 },
-  condTable: { borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 3, overflow: 'hidden', marginBottom: 8 },
-  condHead:  { flexDirection: 'row', backgroundColor: NAVY, minHeight: 20, alignItems: 'center' },
-  condHCell: { flex: 1, paddingHorizontal: 8, paddingVertical: 4, fontSize: 8, fontFamily: 'Helvetica-Bold', color: WHITE },
-  condRow:   { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#E0E0E0', minHeight: 17, alignItems: 'flex-start' },
-  condCell:  { flex: 1, paddingHorizontal: 8, paddingVertical: 3, fontSize: 7.5, color: BLK, lineHeight: 1.4 },
+  tblCell:   { flex: 1, paddingHorizontal: 9, paddingVertical: 5, fontSize: 10, color: BLK },
+  tblBold:   { flex: 1, paddingHorizontal: 9, paddingVertical: 5, fontSize: 10, fontFamily: PJSansBold, color: BLK },
+
+  specRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#EBEBEB', minHeight: 22, alignItems: 'center' },
+  specKey: { width: '42%', paddingHorizontal: 8, paddingVertical: 5, fontSize: 9.5, fontFamily: PJSansBold, color: NAVY, borderRightWidth: 1, borderRightColor: '#EBEBEB' },
+  specVal: { flex: 1, paddingHorizontal: 8, paddingVertical: 5, fontSize: 9.5, color: BLK },
+
+  infoBox:     { padding: 10, borderRadius: 4, marginBottom: 9, backgroundColor: '#EBF0FB', borderLeftWidth: 3, borderLeftColor: NAVY },
+  infoBoxGold: { padding: 10, borderRadius: 4, marginBottom: 9, backgroundColor: '#FFFBEB', borderLeftWidth: 3, borderLeftColor: GOLD },
+  infoTitle:   { fontSize: 10, fontFamily: PJSansBold, color: NAVY, marginBottom: 4 },
+  infoText:    { fontSize: 9.5, color: BLK, lineHeight: 1.6 },
+
+  bulletRow:  { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4 },
+  bulletDot:  { width: 4, height: 4, borderRadius: 2, backgroundColor: GOLD, marginTop: 4, marginRight: 6, flexShrink: 0 },
+  bulletText: { fontSize: 9.5, color: BLK, flex: 1, lineHeight: 1.6 },
+
+  para: { fontSize: 10, color: BLK, lineHeight: 1.6, marginBottom: 6 },
+
+  cols: { flexDirection: 'row', gap: 14, marginBottom: 6 },
+  col:  { flex: 1 },
+
+  condTable: { borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 4, overflow: 'hidden', marginBottom: 9 },
+  condHead:  { flexDirection: 'row', backgroundColor: NAVY, minHeight: 24, alignItems: 'center' },
+  condHCell: { flex: 1, paddingHorizontal: 9, paddingVertical: 5, fontSize: 9.5, fontFamily: PJSansBold, color: WHITE },
+  condRow:   { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#E0E0E0', minHeight: 20, alignItems: 'flex-start' },
+  condCell:  { flex: 1, paddingHorizontal: 9, paddingVertical: 4, fontSize: 9, color: BLK, lineHeight: 1.5 },
+
   footer: {
-    position: 'absolute', bottom: 0, left: 0, right: 0, height: 28,
+    position: 'absolute', bottom: 0, left: 0, right: 0, height: 32,
     backgroundColor: NAVY, flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between', paddingHorizontal: 24,
   },
-  footerTxt:  { fontSize: 7, color: 'rgba(255,255,255,0.65)' },
-  footerGold: { fontSize: 7, color: GOLD, fontFamily: 'Helvetica-Bold' },
+  footerTxt:  { fontSize: 8.5, color: 'rgba(255,255,255,0.65)' },
+  footerGold: { fontSize: 8.5, color: GOLD, fontFamily: PJSansBold },
 });
 
 // ── HELPERS ──────────────────────────────────────────────────
@@ -142,8 +156,8 @@ const Bullet = ({ text }: { text: string }) => (
 const IHeader = ({ folio, client, page }: { folio: string; client: string; page: number }) => (
   <View style={S.header}>
     <View>
-      <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold', color: NAVY, letterSpacing: 0.5 }}>ALAMEX</Text>
-      <Text style={{ fontSize: 7, color: GRAY, letterSpacing: 0.3 }}>Elevadores</Text>
+      <Text style={{ fontSize: 16, fontFamily: PJSansBold, color: NAVY, letterSpacing: 0.3 }}>ALAMEX</Text>
+      <Text style={{ fontSize: 9, color: GRAY, letterSpacing: 0.2 }}>Elevadores</Text>
     </View>
     <View style={S.headerRight}>
       <Text style={S.headerTitle}>Elevadores Alamex · www.alam.mx</Text>
@@ -177,8 +191,7 @@ export function QuotePDFDocument({
   sellerTitle = 'Ventas',
   cabinImage,
 }: Props) {
-  const fmt   = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
-  // Usar project_date de la cotización; si no existe, usar la fecha actual
+  const fmt = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
   const quoteDate = q.project_date
     ? new Date(q.project_date + 'T12:00:00').toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' })
     : new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -186,14 +199,17 @@ export function QuotePDFDocument({
   const isMR  = q.model === 'MR';
   const isHyd = q.model === 'HYD' || q.model === 'Home Lift';
 
-  const total        = (q.price || 0) * q.quantity;
-  const iva          = total * 0.16;
-  const totalConIVA  = total * 1.16;
-  const machineRoom  = isMR ? 'Con Cuarto de Máquinas' : isHyd ? 'N/A (Hidráulico)' : 'Sin Cuarto de Máquinas';
-  const modelLabel   = MODEL_LABELS[q.model] || q.model;
-  const groupLabel   = q.quantity > 1
+  const isPricePerSystem = q.system_type && q.system_type !== 'Simplex';
+  const elevatorTotal    = isPricePerSystem ? (q.price || 0) : (q.price || 0) * q.quantity;
+  const laborTotal       = q.labor_price || 0;
+  const total            = elevatorTotal + laborTotal;
+  const iva              = total * 0.16;
+  const totalConIVA      = total * 1.16;
+  const machineRoom      = isMR ? 'Con Cuarto de Máquinas' : isHyd ? 'N/A (Hidráulico)' : 'Sin Cuarto de Máquinas';
+  const modelLabel       = MODEL_LABELS[q.model] || q.model;
+  const groupLabel       = q.system_type || (q.quantity > 1
     ? (q.quantity === 2 ? 'Duplex' : q.quantity === 3 ? 'Triplex' : `Grupo ${q.quantity}`)
-    : 'Simplex';
+    : 'Simplex');
 
   const terms = q.commercial_terms || {
     paymentMethod:     '50% Anticipo a la firma del Contrato\n25% Al aviso de embarque\n20% Al aviso de entrega del equipo en obra\n05% Al aviso de entrega en funcionamiento',
@@ -203,7 +219,6 @@ export function QuotePDFDocument({
     generalConditions: 'Obra civil por cuenta del cliente.',
   };
 
-  // Opciones PDF con defaults (todo activo si no hay config)
   const opts = q.pdf_options ?? {};
   const seguridadesActivas: string[] = opts.seguridades       ?? TODAS_SEGURIDADES;
   const extrasDescActivos:  string[] = opts.extras_descripcion ?? TODOS_EXTRAS_DESC;
@@ -218,73 +233,80 @@ export function QuotePDFDocument({
   return (
     <Document title={`Propuesta ${q.folio} — ${q.client_name}`} author="Elevadores Alamex">
 
-      {/* ══════════════════════════════════════════════════════
-          PÁG 2 — COTIZACIÓN
-          Carta de presentación + tabla de precio.
-          Eliminada columna "Mano de Obra" (siempre vacía).
-      ══════════════════════════════════════════════════════ */}
+      {/* ══ PÁG 2 — COTIZACIÓN ══ */}
       <Page size="LETTER" style={S.page}>
         <View style={S.stripTop} /><View style={S.stripTop2} />
         <IHeader folio={q.folio} client={q.client_name} page={2} />
 
         <View style={S.body}>
-          <Text style={{ fontSize: 9.5, color: NAVY, fontFamily: 'Helvetica-Bold', marginBottom: 4 }}>
+          <Text style={{ fontSize: 11.5, color: NAVY, fontFamily: PJSansBold, marginBottom: 5 }}>
             Estimado/a {q.client_name}
           </Text>
           <Text style={S.para}>
             Atendiendo su solicitud para cotizar {q.quantity} Elevador{q.quantity > 1 ? 'es' : ''} de{' '}
-            <Text style={{ fontFamily: 'Helvetica-Bold' }}>{(q.use_type || 'PASAJEROS').toUpperCase()}</Text>,
+            <Text style={{ fontFamily: PJSansBold }}>{(q.use_type || 'PASAJEROS').toUpperCase()}</Text>,
             y tomando como base la información suministrada, hacemos llegar la propuesta económica
             para el suministro e instalación del (los) equipo(s) con las características descritas.
           </Text>
 
-          {/* Referencia — fila compacta */}
-          <View style={{ flexDirection: 'row', gap: 16, marginBottom: 10 }}>
-            <View style={{ flexDirection: 'row', gap: 4 }}>
-              <Text style={{ fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: NAVY }}>Referencia:</Text>
-              <Text style={{ fontSize: 8.5, color: BLK }}>{q.folio}</Text>
-            </View>
-            <View style={{ flexDirection: 'row', gap: 4 }}>
-              <Text style={{ fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: NAVY }}>Fecha:</Text>
-              <Text style={{ fontSize: 8.5, color: BLK }}>{quoteDate}</Text>
-            </View>
-            {q.client_email ? (
-              <View style={{ flexDirection: 'row', gap: 4 }}>
-                <Text style={{ fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: NAVY }}>Contacto:</Text>
-                <Text style={{ fontSize: 8.5, color: BLK }}>{q.client_email}</Text>
+          {/* Referencia */}
+          <View style={{ flexDirection: 'row', gap: 18, marginBottom: 12, flexWrap: 'wrap' }}>
+            {[
+              { label: 'Referencia:',          value: q.folio },
+              { label: 'Fecha:',               value: quoteDate },
+              ...(q.client_email    ? [{ label: 'Contacto:', value: q.client_email }] : []),
+              ...(q.installation_city ? [{ label: 'Lugar de instalación:', value: q.installation_city }] : []),
+            ].map(({ label, value }) => (
+              <View key={label} style={{ flexDirection: 'row', gap: 4 }}>
+                <Text style={{ fontSize: 10, fontFamily: PJSansBold, color: NAVY }}>{label}</Text>
+                <Text style={{ fontSize: 10, color: BLK }}>{value}</Text>
               </View>
-            ) : null}
+            ))}
           </View>
 
           <Text style={S.secNum}>1.  COTIZACIÓN DE PROYECTO</Text>
 
-          {/* Tabla de precio — 2 columnas (se eliminó "Mano de Obra" que siempre era "—") */}
-          <View style={{ borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
+          {/* Tabla de precio */}
+          <View style={{ borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 4, overflow: 'hidden', marginBottom: 9 }}>
             <View style={S.tblHeader}>
-              <Text style={[S.tblHCell, { flex: 3 }]}>Descripción del Equipo</Text>
-              <Text style={[S.tblHCell, { textAlign: 'right' }]}>Precio Total</Text>
+              <Text style={[S.tblHCell, { flex: 3 }]}>Descripción</Text>
+              <Text style={[S.tblHCell, { textAlign: 'right' }]}>Importe</Text>
             </View>
 
-            {/* Fila principal */}
-            <View style={[S.tblRow, { alignItems: 'flex-start', paddingVertical: 6 }]}>
+            {/* Fila equipos */}
+            <View style={[S.tblRow, { alignItems: 'flex-start', paddingVertical: 7 }]}>
               <View style={[S.tblCell, { flex: 3 }]}>
-                <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: BLK, marginBottom: 2 }}>
-                  {q.quantity} Elevador{q.quantity > 1 ? 'es' : ''} de {(q.use_type || 'Pasajeros').toUpperCase()}{' '}
-                  {q.model} — {q.stops} niveles / {q.capacity} Kg / {q.persons} personas
+                <Text style={{ fontSize: 10.5, fontFamily: PJSansBold, color: BLK }}>
+                  {isPricePerSystem
+                    ? `Sistema ${q.system_type} — ${q.quantity} Elevador${q.quantity > 1 ? 'es' : ''} de ${(q.use_type || 'Pasajeros').toUpperCase()} ${q.model}`
+                    : `${q.quantity} Elevador${q.quantity > 1 ? 'es' : ''} de ${(q.use_type || 'Pasajeros').toUpperCase()} ${q.model}`
+                  }{' — '}{q.stops} niveles / {q.capacity} Kg / {q.persons} personas
                   {q.cabin_floor  ? ` / Piso ${q.cabin_floor}`   : ''}
                   {q.cabin_finish ? ` / Cabina ${q.cabin_finish}` : ''}
                   {q.door_type    ? ` / Puertas ${q.door_type}`   : ''}
                   {extrasStr}
                 </Text>
-                <Text style={{ fontSize: 7.5, color: GRAY }}>
-                  Suministro + Instalación + Puesta en marcha
-                </Text>
               </View>
-              <Text style={[S.tblBold, { textAlign: 'right' }]}>{fmt.format(total)} {q.currency || 'MXN'}</Text>
+              <Text style={[S.tblBold, { textAlign: 'right' }]}>{fmt.format(elevatorTotal)} {q.currency || 'MXN'}</Text>
             </View>
 
+            {/* Mano de obra */}
+            {laborTotal > 0 && (
+              <View style={[S.tblRow, S.tblAlt, { alignItems: 'flex-start', paddingVertical: 6 }]}>
+                <View style={[S.tblCell, { flex: 3 }]}>
+                  <Text style={{ fontSize: 10.5, fontFamily: PJSansBold, color: BLK, marginBottom: 1 }}>
+                    Mano de Obra
+                  </Text>
+                  <Text style={{ fontSize: 9, color: GRAY }}>
+                    Instalación y puesta en marcha por personal técnico especializado
+                  </Text>
+                </View>
+                <Text style={[S.tblBold, { textAlign: 'right' }]}>{fmt.format(laborTotal)} {q.currency || 'MXN'}</Text>
+              </View>
+            )}
+
             {/* IVA */}
-            <View style={[S.tblRow, S.tblAlt]}>
+            <View style={[S.tblRow, laborTotal > 0 ? {} : S.tblAlt]}>
               <Text style={[S.tblCell, { flex: 3 }]}>IVA (16%)</Text>
               <Text style={[S.tblBold, { textAlign: 'right' }]}>{fmt.format(iva)} {q.currency || 'MXN'}</Text>
             </View>
@@ -292,7 +314,7 @@ export function QuotePDFDocument({
             {/* Total */}
             <View style={[S.tblRow, { backgroundColor: NAVY }]}>
               <Text style={[S.tblBold, { flex: 3, color: WHITE }]}>Total Con IVA</Text>
-              <Text style={[S.tblBold, { textAlign: 'right', color: GOLD, fontSize: 11 }]}>
+              <Text style={[S.tblBold, { textAlign: 'right', color: GOLD, fontSize: 12 }]}>
                 {fmt.format(totalConIVA)} {q.currency || 'MXN'}
               </Text>
             </View>
@@ -304,16 +326,63 @@ export function QuotePDFDocument({
               * Precios en {q.currency || 'MXN'}. Sujetos a variación en tipo de cambio si aplica.
             </Text>
           </View>
+
+          {/* Resumen del proyecto */}
+          <Text style={[S.secNum, { marginTop: 13 }]}>2.  RESUMEN DEL PROYECTO</Text>
+          <View style={{ borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 4, overflow: 'hidden' }}>
+            <View style={{ backgroundColor: NAVY, paddingHorizontal: 10, paddingVertical: 7 }}>
+              <Text style={{ fontSize: 10, fontFamily: PJSansBold, color: WHITE }}>DATOS DEL PROYECTO</Text>
+            </View>
+            <View style={{ flexDirection: 'row' }}>
+              <View style={{ flex: 1, borderRightWidth: 1, borderRightColor: '#E0E0E0' }}>
+                <View style={S.specRow}>
+                  <Text style={[S.specKey, { fontSize: 9.5 }]}>Cliente</Text>
+                  <Text style={[S.specVal, { fontSize: 9.5, fontFamily: PJSansBold }]}>{q.client_name}</Text>
+                </View>
+                {q.installation_city ? (
+                  <View style={[S.specRow, { backgroundColor: LGRAY }]}>
+                    <Text style={[S.specKey, { fontSize: 9.5 }]}>Lugar de instalación</Text>
+                    <Text style={[S.specVal, { fontSize: 9.5 }]}>{q.installation_city}</Text>
+                  </View>
+                ) : null}
+                <View style={[S.specRow, q.installation_city ? {} : { backgroundColor: LGRAY }]}>
+                  <Text style={[S.specKey, { fontSize: 9.5 }]}>Referencia</Text>
+                  <Text style={[S.specVal, { fontSize: 9.5 }]}>{q.folio}</Text>
+                </View>
+                <View style={[S.specRow, q.installation_city ? { backgroundColor: LGRAY } : {}]}>
+                  <Text style={[S.specKey, { fontSize: 9.5 }]}>Tipo de sistema</Text>
+                  <Text style={[S.specVal, { fontSize: 9.5 }]}>{groupLabel}</Text>
+                </View>
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={S.specRow}>
+                  <Text style={[S.specKey, { fontSize: 9.5 }]}>Tiempo de entrega</Text>
+                  <Text style={[S.specVal, { fontSize: 9.5 }]}>{terms.deliveryTime}</Text>
+                </View>
+                <View style={[S.specRow, { backgroundColor: LGRAY }]}>
+                  <Text style={[S.specKey, { fontSize: 9.5 }]}>Garantía</Text>
+                  <Text style={[S.specVal, { fontSize: 9.5 }]}>{terms.warranty}</Text>
+                </View>
+                <View style={S.specRow}>
+                  <Text style={[S.specKey, { fontSize: 9.5 }]}>Validez de la propuesta</Text>
+                  <Text style={[S.specVal, { fontSize: 9.5 }]}>{terms.validity || '30 días naturales'}</Text>
+                </View>
+                {isPricePerSystem && (
+                  <View style={[S.specRow, { backgroundColor: LGRAY }]}>
+                    <Text style={[S.specKey, { fontSize: 9.5 }]}>Precio del sistema</Text>
+                    <Text style={[S.specVal, { fontSize: 9.5, color: NAVY, fontFamily: PJSansBold }]}>Cotizado por sistema completo</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          </View>
         </View>
 
         <View style={S.stripBot} /><View style={S.stripBot2} />
         <IFooter seller={seller} title={sellerTitle} />
       </Page>
 
-      {/* ══════════════════════════════════════════════════════
-          PÁG 3 — ESPECIFICACIONES TÉCNICAS
-          Tabla completa + imagen del modelo. Sin cambios.
-      ══════════════════════════════════════════════════════ */}
+      {/* ══ PÁG 3 — ESPECIFICACIONES TÉCNICAS ══ */}
       <Page size="LETTER" style={S.page}>
         <View style={S.stripTop} /><View style={S.stripTop2} />
         <IHeader folio={q.folio} client={q.client_name} page={3} />
@@ -322,9 +391,8 @@ export function QuotePDFDocument({
           <Text style={S.secTitle}>ESPECIFICACIONES TÉCNICAS DEL SISTEMA DE ELEVACIÓN</Text>
           <View style={{ flexDirection: 'row', gap: 14 }}>
 
-            {/* Tabla de specs */}
             <View style={{ flex: 1 }}>
-              <View style={{ borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 3, overflow: 'hidden' }}>
+              <View style={{ borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 4, overflow: 'hidden' }}>
                 <Spec label="TIPO"                   value={q.model} />
                 <Spec label="CAPACIDAD"              value={`${q.capacity} Kg / ${q.persons} Pasajeros`} alt />
                 <Spec label="NÚMERO DE PARADAS"      value={q.stops} />
@@ -353,10 +421,10 @@ export function QuotePDFDocument({
                   try {
                     const ex: string[] = JSON.parse(q.cabin_model || '[]');
                     if (Array.isArray(ex) && ex.length > 0) {
-                      const EL: Record<string,string> = {
-                        'espejo-trasero':'Espejo fondo','espejo-lateral':'Espejo lateral',
-                        'pasamanos-inox':'Pasam. INOX','pasamanos-crom':'Pasam. cromado',
-                        'led-premium':'LED Premium','panoramico':'Panel panorámico',
+                      const EL: Record<string, string> = {
+                        'espejo-trasero': 'Espejo fondo', 'espejo-lateral': 'Espejo lateral',
+                        'pasamanos-inox': 'Pasam. INOX', 'pasamanos-crom': 'Pasam. cromado',
+                        'led-premium': 'LED Premium', 'panoramico': 'Panel panorámico',
                       };
                       return <Spec label="ACCESORIOS CABINA" value={ex.map(e => EL[e] || e).join(' / ')} />;
                     }
@@ -369,23 +437,20 @@ export function QuotePDFDocument({
               </View>
             </View>
 
-            {/* Columna derecha: modelo + cabina configurada */}
+            {/* Columna derecha */}
             <View style={{ width: 130, alignItems: 'center', paddingTop: 16 }}>
-
-              {/* Imagen del modelo de elevador */}
               <Image
                 src={elevatorImage(q.model)}
                 style={{ width: 120, height: cabinImage ? 180 : 250, objectFit: 'contain' }}
               />
-              <Text style={{ fontSize: 7, color: NAVY, fontFamily: 'Helvetica-Bold', marginTop: 4, textAlign: 'center' }}>
+              <Text style={{ fontSize: 8.5, color: NAVY, fontFamily: PJSansBold, marginTop: 5, textAlign: 'center' }}>
                 {modelLabel}
               </Text>
 
-              {/* Imagen de cabina configurada — solo si fue capturada en el formulario */}
               {cabinImage ? (
                 <View style={{ marginTop: 10, alignItems: 'center', width: '100%' }}>
                   <View style={{ width: '100%', height: 1, backgroundColor: GOLD, marginBottom: 6 }} />
-                  <Text style={{ fontSize: 6.5, color: GRAY, fontFamily: 'Helvetica-Bold', textAlign: 'center', letterSpacing: 0.3, marginBottom: 5, textTransform: 'uppercase' }}>
+                  <Text style={{ fontSize: 8, color: GRAY, fontFamily: PJSansBold, textAlign: 'center', letterSpacing: 0.2, marginBottom: 5, textTransform: 'uppercase' }}>
                     Diseño de cabina
                   </Text>
                   <Image
@@ -394,7 +459,6 @@ export function QuotePDFDocument({
                   />
                 </View>
               ) : null}
-
             </View>
           </View>
         </View>
@@ -403,13 +467,7 @@ export function QuotePDFDocument({
         <IFooter seller={seller} title={sellerTitle} />
       </Page>
 
-      {/* ══════════════════════════════════════════════════════
-          PÁG 4 — PUERTAS · SEGURIDADES · CALIDAD · VENTAJAS
-          Fusión de antiguas Págs 4 y 5.
-          Layout: 2 columnas.
-            Izq: Puertas + Normativa (opt) + Calidad (opt)
-            Der: Seguridades + Ventajas (opt)
-      ══════════════════════════════════════════════════════ */}
+      {/* ══ PÁG 4 — PUERTAS · SEGURIDADES · CALIDAD · VENTAJAS ══ */}
       <Page size="LETTER" style={S.page}>
         <View style={S.stripTop} /><View style={S.stripTop2} />
         <IHeader folio={q.folio} client={q.client_name} page={4} />
@@ -417,10 +475,9 @@ export function QuotePDFDocument({
         <View style={S.body}>
           <View style={S.cols}>
 
-            {/* COLUMNA IZQUIERDA */}
             <View style={S.col}>
               <Text style={S.secTitle}>PUERTAS</Text>
-              <View style={{ borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
+              <View style={{ borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 4, overflow: 'hidden', marginBottom: 9 }}>
                 <Spec label="Puertas de piso"   value={`${q.stops} puertas`} />
                 <Spec label="Puertas de cabina" value="1 puerta" alt />
                 <Spec label="Tipo de puerta"    value={q.door_type} />
@@ -428,19 +485,17 @@ export function QuotePDFDocument({
                 <Spec label="Acabado"           value={q.use_type === 'Pasajeros' ? 'Acero Inoxidable (INOX)' : 'Pintura Epóxica Industrial'} />
               </View>
 
-              {/* Normativa — opcional */}
               {mostrarNormativa && (
                 <View style={S.infoBox}>
                   <Text style={S.infoTitle}>Normativa aplicable — {q.norm || 'EN 81-20'}</Text>
                   <Text style={S.infoText}>
                     Nuestros equipos están diseñados y fabricados bajo los requerimientos de la norma{' '}
-                    <Text style={{ fontFamily: 'Helvetica-Bold' }}>{q.norm || 'EN 81-20'}</Text>{' '}
+                    <Text style={{ fontFamily: PJSansBold }}>{q.norm || 'EN 81-20'}</Text>{' '}
                     y la normativa mexicana NOM-53.
                   </Text>
                 </View>
               )}
 
-              {/* Calidad y estándares — opcional (antes en Pág 5) */}
               {mostrarCalidad && (
                 <View style={S.infoBox}>
                   <Text style={S.infoTitle}>Calidad y estándares</Text>
@@ -452,9 +507,7 @@ export function QuotePDFDocument({
               )}
             </View>
 
-            {/* COLUMNA DERECHA */}
             <View style={S.col}>
-              {/* Seguridades */}
               {seguridadesActivas.length > 0 && (
                 <>
                   <Text style={S.secTitle}>SEGURIDADES INCLUIDAS</Text>
@@ -462,9 +515,8 @@ export function QuotePDFDocument({
                 </>
               )}
 
-              {/* Ventajas ALAMEX — opcional (antes en Pág 5) */}
               {mostrarVentajas && (
-                <View style={[S.infoBoxGold, { marginTop: seguridadesActivas.length > 0 ? 8 : 0 }]}>
+                <View style={[S.infoBoxGold, { marginTop: seguridadesActivas.length > 0 ? 9 : 0 }]}>
                   <Text style={S.infoTitle}>Ventajas del sistema ALAMEX</Text>
                   <Bullet text="Bajo consumo de energía eléctrica" />
                   <Bullet text="Mayor confort en arranque y frenado" />
@@ -481,10 +533,7 @@ export function QuotePDFDocument({
         <IFooter seller={seller} title={sellerTitle} />
       </Page>
 
-      {/* ══════════════════════════════════════════════════════
-          PÁG 5 — CONDICIONES COMERCIALES
-          (antes Pág 6 — renumerada, sin cambios de contenido)
-      ══════════════════════════════════════════════════════ */}
+      {/* ══ PÁG 5 — CONDICIONES COMERCIALES ══ */}
       <Page size="LETTER" style={S.page}>
         <View style={S.stripTop} /><View style={S.stripTop2} />
         <IHeader folio={q.folio} client={q.client_name} page={5} />
@@ -532,9 +581,9 @@ export function QuotePDFDocument({
               .filter(line => line.trim())
               .map((line, i) => (
                 <View key={i} style={[S.condRow, i % 2 === 1 ? { backgroundColor: LGRAY } : {}]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingHorizontal: 8, paddingVertical: 4 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingHorizontal: 9, paddingVertical: 5 }}>
                     <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: GOLD, marginRight: 7, flexShrink: 0 }} />
-                    <Text style={{ fontSize: 8, color: BLK, lineHeight: 1.4, flex: 1 }}>{line.trim()}</Text>
+                    <Text style={{ fontSize: 9.5, color: BLK, lineHeight: 1.5, flex: 1 }}>{line.trim()}</Text>
                   </View>
                 </View>
               ))
@@ -543,18 +592,18 @@ export function QuotePDFDocument({
 
           <Text style={S.secNum}>6.  VALIDEZ DE LA PROPUESTA</Text>
           <View style={S.infoBoxGold}>
-            <Text style={{ fontSize: 9, color: BLK, fontFamily: 'Helvetica-Bold' }}>
+            <Text style={{ fontSize: 10.5, color: BLK, fontFamily: PJSansBold }}>
               {terms.validity || '15 días naturales'}
             </Text>
           </View>
 
           {/* Firma */}
-          <View style={{ marginTop: 16, alignItems: 'flex-end' }}>
-            <Text style={{ fontSize: 8.5, color: GRAY, marginBottom: 2 }}>Atentamente,</Text>
-            <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: NAVY }}>{seller}</Text>
-            <Text style={{ fontSize: 8, color: GRAY }}>{sellerTitle}</Text>
-            <Text style={{ fontSize: 8, color: GRAY }}>Elevadores Alamex S.A. de C.V.</Text>
-            <Text style={{ fontSize: 7.5, color: GRAY, marginTop: 2 }}>Tel. +5255 5532 2739  ·  info@alam.mx</Text>
+          <View style={{ marginTop: 18, alignItems: 'flex-end' }}>
+            <Text style={{ fontSize: 9.5, color: GRAY, marginBottom: 2 }}>Atentamente,</Text>
+            <Text style={{ fontSize: 12, fontFamily: PJSansBold, color: NAVY }}>{seller}</Text>
+            <Text style={{ fontSize: 9.5, color: GRAY }}>{sellerTitle}</Text>
+            <Text style={{ fontSize: 9.5, color: GRAY }}>Elevadores Alamex S.A. de C.V.</Text>
+            <Text style={{ fontSize: 9, color: GRAY, marginTop: 2 }}>Tel. +5255 5532 2739  ·  info@alam.mx</Text>
           </View>
         </View>
 

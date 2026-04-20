@@ -5,7 +5,7 @@ export default {
     extend: {
       fontFamily: {
         display: ['Syne', 'sans-serif'],
-        body: ['DM Sans', 'sans-serif'],
+        body: ['Plus Jakarta Sans', 'sans-serif'],
       },
       colors: {
         navy: {

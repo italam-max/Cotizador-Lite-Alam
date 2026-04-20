@@ -106,7 +106,7 @@ export default function Dashboard({ onNewQuote, onEditQuote, onOpenDetail }: Pro
 
             {/* Recientes */}
             <div className="lg:col-span-4 luxury-glass rounded-xl p-4 flex flex-col shadow-sm border border-[#D4AF37]/20">
-              <h3 className="font-bold text-[#0A2463] text-xs uppercase tracking-wider mb-3 flex items-center gap-2 border-b border-[#0A2463]/10 pb-2">
+              <h3 className="font-bold text-[#0A2463] text-sm mb-3 flex items-center gap-2 border-b border-[#0A2463]/10 pb-2">
                 <TrendingUp size={14} className="text-[#D4AF37]" /> Recientes
               </h3>
               <div className="flex-1 overflow-y-auto space-y-2 max-h-[140px]">
@@ -140,7 +140,7 @@ export default function Dashboard({ onNewQuote, onEditQuote, onOpenDetail }: Pro
               <div className="flex bg-[#0A2463]/5 rounded-lg p-1 self-start sm:self-auto">
                 {['Todos','Abiertas','Ganadas','Perdidas'].map(tab => (
                   <button key={tab} onClick={() => setFilter(tab)}
-                    className={`px-4 py-1.5 rounded-md text-[11px] font-bold transition-all uppercase tracking-wide ${
+                    className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${
                       filter === tab
                         ? 'bg-white text-[#0A2463] shadow-sm ring-1 ring-black/5'
                         : 'text-[#0A2463]/60 hover:text-[#0A2463]'
@@ -252,7 +252,7 @@ function MetricCard({ label, value, sub, icon: Icon, color, bgIcon }: {
         <Icon className={color} size={20} />
       </div>
       <div className="min-w-0">
-        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">{label}</p>
+        <p className="text-sm font-medium text-gray-400 mb-1">{label}</p>
         <p className="font-black text-2xl text-[#0A2463] leading-none"
           style={{ fontFamily: "'Syne', sans-serif" }}>{value}</p>
         <p className="text-xs text-gray-400 mt-1">{sub}</p>
