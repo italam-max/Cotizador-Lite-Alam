@@ -17,7 +17,7 @@ export const SPEEDS = ['0.6', '1.0', '1.6', '1.75', '2.0', '2.5', '3.0', '4.0'];
 
 export const MODELS: { id: ModelId; label: string; desc: string }[] = [
   { id: 'MRL-L', label: 'MRL-L',     desc: 'Sin cuarto de máquinas — Chasis L (hasta 450 kg, 8 paradas)' },
-  { id: 'MRL-G', label: 'MRL-G',     desc: 'Sin cuarto de máquinas — Chasis G (hasta 1000 kg, 8 paradas)' },
+  { id: 'MRL-G', label: 'MRL-G',     desc: 'Sin cuarto de máquinas — Chasis G (hasta 2000 kg, 8 paradas)' },
   { id: 'MR',    label: 'MR',        desc: 'Con cuarto de máquinas (alta carga, muchos niveles)' },
   { id: 'HYD',   label: 'Hidráulico',desc: 'Hidráulico (máx. 12m recorrido, 3 paradas, 0.6 m/s)' },
   { id: 'Home Lift', label: 'Home Lift', desc: 'Residencial (homelift hidráulico o gearless)' },
@@ -29,6 +29,9 @@ export const SHAFT_RULES: { minKg: number; maxKg: number; model: ModelId; minWid
   { minKg: 451,  maxKg: 630,  model: 'MRL-G', minWidth: 1600, minDepth: 1650, maxSpeed: 1.6  },
   { minKg: 631,  maxKg: 800,  model: 'MRL-G', minWidth: 1750, minDepth: 1750, maxSpeed: 1.75 },
   { minKg: 801,  maxKg: 1000, model: 'MRL-G', minWidth: 1800, minDepth: 2000, maxSpeed: 2.0  },
+  { minKg: 1001, maxKg: 1250, model: 'MRL-G', minWidth: 1900, minDepth: 2200, maxSpeed: 2.0  },
+  { minKg: 1251, maxKg: 1600, model: 'MRL-G', minWidth: 2000, minDepth: 2300, maxSpeed: 2.5  },
+  { minKg: 1601, maxKg: 2000, model: 'MRL-G', minWidth: 2100, minDepth: 2400, maxSpeed: 2.5  },
   { minKg: 1001, maxKg: 1275, model: 'MR',    minWidth: 2000, minDepth: 2400, maxSpeed: 2.5  },
   { minKg: 1276, maxKg: 1600, model: 'MR',    minWidth: 2355, minDepth: 2730, maxSpeed: 2.5  },
   { minKg: 1601, maxKg: 2000, model: 'MR',    minWidth: 2555, minDepth: 2800, maxSpeed: 2.5  },
@@ -63,8 +66,13 @@ export const getDims = (speed: number, model: ModelId) => {
   return fallback ? { pit: fallback.pit, overhead: fallback.overhead } : { pit: 1300, overhead: 3900 };
 };
 
-export const getShaftRule = (capacity: number) =>
-  SHAFT_RULES.find(r => capacity >= r.minKg && capacity <= r.maxKg);
+export const getShaftRule = (capacity: number, model?: ModelId) => {
+  if (model) {
+    const specific = SHAFT_RULES.find(r => capacity >= r.minKg && capacity <= r.maxKg && r.model === model);
+    if (specific) return specific;
+  }
+  return SHAFT_RULES.find(r => capacity >= r.minKg && capacity <= r.maxKg);
+};
 
 /** Velocidad mínima recomendada por EN 81 según número de paradas */
 export const minSpeedForStops = (stops: number): number => {
@@ -81,7 +89,7 @@ export const suggestModel = (capacity: number, stops: number, travel: number): M
   const HYD_MAX_TRAVEL = 12000;
   const HYD_MAX_STOPS  = 3;
   if (travel <= HYD_MAX_TRAVEL && stops <= HYD_MAX_STOPS && capacity <= 1000) return 'HYD';
-  if (stops > 8 || capacity > 1000) return 'MR';
+  if (stops > 8 || capacity > 2000) return 'MR';
   if (capacity <= 450) return 'MRL-L';
   return 'MRL-G';
 };
@@ -128,12 +136,12 @@ export const computeDefaults = (current: Partial<Omit<Quote, 'id'|'created'|'upd
   if (!model) { model = suggestModel(capacity, stops, travel); out.model = model; }
   if (model === 'MRL-L' && capacity > 450)   { model = 'MRL-G'; out.model = model; }
   if (model === 'MRL-L' && stops > 8)         { model = 'MR';    out.model = model; }
-  if ((model === 'MRL-G'||model==='MRL-L') && capacity > 1000) { model = 'MR'; out.model = model; }
+  if ((model === 'MRL-G'||model==='MRL-L') && capacity > 2000) { model = 'MR'; out.model = model; }
   if ((model === 'MRL-G'||model==='MRL-L') && stops > 8) { model = 'MR'; out.model = model; }
   if ((model === 'HYD'||model==='Home Lift') && (travel > 12000 || stops > 3)) { model = 'MRL-G'; out.model = model; }
 
   // 4. Velocidad
-  const shaftRule = getShaftRule(capacity);
+  const shaftRule = getShaftRule(capacity, model);
   const isHyd = model === 'HYD' || model === 'Home Lift';
   const maxSpeed = isHyd ? 0.6 : (shaftRule?.maxSpeed ?? 1.0);
   const minSpeed = isHyd ? 0.6 : minSpeedForStops(stops);
@@ -214,7 +222,7 @@ export const validate = (q: Partial<Quote>): ValidationResult => {
       warn('door_side', 'MRL-L requiere especificar lado de apertura (muro de carga)');
   }
   if (model === 'MRL-G') {
-    if (capacity > 1000) err('capacity', `MRL-G: máx. 1000 kg. Actual: ${capacity} kg`);
+    if (capacity > 2000) err('capacity', `MRL-G: máx. 2000 kg. Actual: ${capacity} kg`);
     if (stops > 8)       err('stops',    `MRL-G: máx. 8 paradas recomendado. Actual: ${stops}`);
   }
   if (isHyd) {
@@ -225,7 +233,7 @@ export const validate = (q: Partial<Quote>): ValidationResult => {
 
   // Velocidad
   const minSpd = isHyd ? 0.6 : minSpeedForStops(stops);
-  const shRule = getShaftRule(capacity);
+  const shRule = getShaftRule(capacity, model as ModelId);
   const maxSpd = isHyd ? 0.6 : (shRule?.maxSpeed ?? 1.0);
   if (speed < minSpd) err('speed', `Mín. ${minSpd} m/s para ${stops} paradas. Actual: ${speed} m/s`);
   if (speed > maxSpd) err('speed', `Máx. ${maxSpd} m/s para ${capacity} kg. Actual: ${speed} m/s`);
@@ -259,14 +267,14 @@ export const getAllowedModels = (capacity: number, stops: number, travel: number
   MODELS.filter(m => {
     const id = m.id;
     if ((id === 'HYD'||id==='Home Lift') && (travel > 12000 || stops > 3)) return false;
-    if (id === 'MRL-L' && (capacity > 450 || stops > 8)) return false;
-    if ((id === 'MRL-G'||id==='MRL-L') && (capacity > 1000 || stops > 8)) return false;
+    if (id === 'MRL-L' && (capacity > 450  || stops > 8)) return false;
+    if (id === 'MRL-G' && (capacity > 2000 || stops > 8)) return false;
     return true;
   });
 
 export const getAllowedSpeeds = (model: ModelId, capacity: number, stops: number): string[] => {
   const isHyd = model === 'HYD' || model === 'Home Lift';
-  const shRule = getShaftRule(capacity);
+  const shRule = getShaftRule(capacity, model);
   const maxSpd = isHyd ? 0.6 : (shRule?.maxSpeed ?? 2.5);
   const minSpd = isHyd ? 0.6 : minSpeedForStops(stops);
   const valid = SPEEDS.filter(s => { const v = parseFloat(s); return v >= minSpd && v <= maxSpd; });

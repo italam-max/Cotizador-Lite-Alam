@@ -714,16 +714,14 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
                   )}
                   <div className={`grid grid-cols-2 gap-2 ${isMRL_L ? 'col-span-2' : ''}`}>
                     <Field label="Ancho paso (mm)">
-                      <select className={SELECT} value={form.door_width}
-                        onChange={e => update({ door_width: Number(e.target.value) })}>
-                        {[700,800,900,1000,1100,1200].map(w => <option key={w}>{w}</option>)}
-                      </select>
+                      <input type="number" className={INPUT} min={600} max={2000} step={50}
+                        value={form.door_width}
+                        onChange={e => update({ door_width: Number(e.target.value) })} />
                     </Field>
                     <Field label="Alto paso (mm)">
-                      <select className={SELECT} value={form.door_height}
-                        onChange={e => update({ door_height: Number(e.target.value) })}>
-                        {[2000,2100,2200,2300,2400].map(h => <option key={h}>{h}</option>)}
-                      </select>
+                      <input type="number" className={INPUT} min={1800} max={3000} step={50}
+                        value={form.door_height}
+                        onChange={e => update({ door_height: Number(e.target.value) })} />
                     </Field>
                   </div>
 
