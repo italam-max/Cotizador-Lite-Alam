@@ -122,9 +122,18 @@ function PDFPreviewModal({
       const { pdf }              = await import('@react-pdf/renderer');
       const { QuotePDFDocument } = await import('../pdf/QuotePDF');
       const React = await import('react');
+      const { CABIN_WALLS, FLOOR_FINISHES, PLAFONOS } = await import('../../data/engineRules');
+      const origin     = window.location.origin;
+      const toAbs      = (p: string) => p ? `${origin}${p}` : '';
+      const wallItem   = CABIN_WALLS.find((w: any) => w.label === quote.cabin_finish);
+      const floorItem  = FLOOR_FINISHES.find((f: any) => f.label === quote.cabin_floor);
+      const plafonItem = PLAFONOS.find((p: any) => p.id === quote.cop_model);
       const element = React.createElement(QuotePDFDocument as any, {
         quote, seller: sellerName, sellerTitle,
-        cabinImage: cabinImage || undefined,
+        cabinImage:  `${origin}/catalog/cabin/Cabina-Pasajeros.png`,
+        wallImg:     toAbs(wallItem?.img   || ''),
+        floorImg:    toAbs(floorItem?.img  || ''),
+        plafonImg:   toAbs(plafonItem?.img || ''),
       });
       const contentBlob = await pdf(element as any).toBlob();
       const { mergeAndDownload } = await import('../../services/pdfMerge');
