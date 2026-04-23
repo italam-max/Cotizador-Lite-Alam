@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 // ARCHIVO: src/types/database.ts
 
-export type QuoteStatus = 'Borrador' | 'Enviada' | 'En Negociación' | 'Ganada' | 'Perdida' | 'Cancelada';
+export type QuoteStatus = 'Borrador' | 'En progreso' | 'En Negociación' | 'Ganada' | 'Perdida' | 'Cancelada';
 export type ModelId    = 'MR' | 'MRL-L' | 'MRL-G' | 'HYD' | 'Home Lift';
 export type UseType    = 'Pasajeros' | 'Carga' | 'Montaplatos';
 export type Supplier   = 'Turco' | 'Chino';
@@ -9,12 +9,13 @@ export type DoorSide   = 'Izquierda' | 'Derecha' | 'N/A';
 export type Currency   = 'MXN' | 'USD';
 
 export interface CommercialTerms {
-  paymentMethod:     string;
-  deliveryTime:      string;
-  warranty:          string;
-  validity:          string;
-  currency:          Currency;
-  generalConditions: string;
+  paymentMethod:      string;
+  paymentMethodLabor: string;
+  deliveryTime:       string;
+  warranty:           string;
+  validity:           string;
+  currency:           Currency;
+  generalConditions:  string;
 }
 
 export interface Profile {

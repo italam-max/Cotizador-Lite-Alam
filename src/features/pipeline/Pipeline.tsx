@@ -9,7 +9,7 @@ interface Props { onOpenDetail: (q: Quote) => void }
 
 const STATUS_CFG: Record<string, { dot: string; bg: string; text: string; label: string }> = {
   'Borrador':       { dot: '#94a3b8', bg: 'bg-slate-100',  text: 'text-slate-600',  label: 'Borrador'       },
-  'Enviada':        { dot: '#3b82f6', bg: 'bg-blue-50',    text: 'text-blue-700',   label: 'Enviada'        },
+  'En progreso':    { dot: '#3b82f6', bg: 'bg-blue-50',    text: 'text-blue-700',   label: 'En progreso'    },
   'En Negociación': { dot: '#f59e0b', bg: 'bg-amber-50',   text: 'text-amber-700',  label: 'Negociación'    },
   'Ganada':         { dot: '#10b981', bg: 'bg-emerald-50', text: 'text-emerald-700',label: 'Ganada'         },
   'Perdida':        { dot: '#ef4444', bg: 'bg-red-50',     text: 'text-red-500',    label: 'Perdida'        },
@@ -21,7 +21,7 @@ const MODEL_COLOR: Record<string, string> = {
 };
 
 const FILTER_ORDER: (QuoteStatus | null)[] = [
-  null, 'Enviada', 'En Negociación', 'Borrador', 'Ganada', 'Perdida',
+  null, 'En progreso', 'En Negociación', 'Borrador', 'Ganada', 'Perdida',
 ];
 
 const fmt    = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
@@ -52,7 +52,7 @@ export default function Pipeline({ onOpenDetail }: Props) {
   const filtered = filter ? sorted.filter(q => q.status === filter) : sorted;
 
   const pipelineValue = quotes
-    .filter(q => ['Enviada', 'En Negociación'].includes(q.status))
+    .filter(q => ['En progreso', 'En Negociación'].includes(q.status))
     .reduce((s, q) => s + quoteTotal(q), 0);
 
   return (
@@ -85,7 +85,7 @@ export default function Pipeline({ onOpenDetail }: Props) {
 
           {/* Mini-KPIs por estatus */}
           <div className="flex items-center gap-2 flex-wrap">
-            {(['Enviada','En Negociación','Ganada','Perdida'] as QuoteStatus[]).map(s => {
+            {(['En progreso','En Negociación','Ganada','Perdida'] as QuoteStatus[]).map(s => {
               const count = quotes.filter(q => q.status === s).length;
               if (!count) return null;
               const cfg = STATUS_CFG[s];

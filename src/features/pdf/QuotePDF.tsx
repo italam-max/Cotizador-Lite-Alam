@@ -93,7 +93,7 @@ const S = StyleSheet.create({
     marginBottom: 7, marginTop: 12,
     paddingBottom: 4, borderBottomWidth: 1.5, borderBottomColor: GOLD,
   },
-  secNum: { fontSize: 11.5, fontFamily: PJSansBold, color: NAVY, marginBottom: 6, marginTop: 10 },
+  secNum: { fontSize: 11.5, fontFamily: PJSansBold, color: NAVY, marginBottom: 5, marginTop: 7 },
 
   tblHeader: { flexDirection: 'row', backgroundColor: NAVY, minHeight: 26, alignItems: 'center' },
   tblHCell:  { flex: 1, paddingHorizontal: 9, paddingVertical: 5, fontSize: 10, fontFamily: PJSansBold, color: WHITE },
@@ -102,12 +102,12 @@ const S = StyleSheet.create({
   tblCell:   { flex: 1, paddingHorizontal: 9, paddingVertical: 5, fontSize: 10, color: BLK },
   tblBold:   { flex: 1, paddingHorizontal: 9, paddingVertical: 5, fontSize: 10, fontFamily: PJSansBold, color: BLK },
 
-  specRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#EBEBEB', minHeight: 22, alignItems: 'center' },
-  specKey: { width: '42%', paddingHorizontal: 8, paddingVertical: 5, fontSize: 9.5, fontFamily: PJSansBold, color: NAVY, borderRightWidth: 1, borderRightColor: '#EBEBEB' },
-  specVal: { flex: 1, paddingHorizontal: 8, paddingVertical: 5, fontSize: 9.5, color: BLK },
+  specRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#EBEBEB', minHeight: 19, alignItems: 'center' },
+  specKey: { width: '42%', paddingHorizontal: 8, paddingVertical: 3, fontSize: 9.5, fontFamily: PJSansBold, color: NAVY, borderRightWidth: 1, borderRightColor: '#EBEBEB' },
+  specVal: { flex: 1, paddingHorizontal: 8, paddingVertical: 3, fontSize: 9.5, color: BLK },
 
-  infoBox:     { padding: 10, borderRadius: 4, marginBottom: 9, backgroundColor: '#EBF0FB', borderLeftWidth: 3, borderLeftColor: NAVY },
-  infoBoxGold: { padding: 10, borderRadius: 4, marginBottom: 9, backgroundColor: '#FFFBEB', borderLeftWidth: 3, borderLeftColor: GOLD },
+  infoBox:     { padding: 8, borderRadius: 4, marginBottom: 7, backgroundColor: '#EBF0FB', borderLeftWidth: 3, borderLeftColor: NAVY },
+  infoBoxGold: { padding: 8, borderRadius: 4, marginBottom: 7, backgroundColor: '#FFFBEB', borderLeftWidth: 3, borderLeftColor: GOLD },
   infoTitle:   { fontSize: 10, fontFamily: PJSansBold, color: NAVY, marginBottom: 4 },
   infoText:    { fontSize: 9.5, color: BLK, lineHeight: 1.6 },
 
@@ -190,6 +190,9 @@ export function QuotePDFDocument({
   seller = 'Ejecutivo de Ventas',
   sellerTitle = 'Ventas',
   cabinImage,
+  wallImg,
+  floorImg,
+  plafonImg,
 }: Props) {
   const fmt = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
   const quoteDate = q.project_date
@@ -212,11 +215,12 @@ export function QuotePDFDocument({
     : 'Simplex');
 
   const terms = q.commercial_terms || {
-    paymentMethod:     '50% Anticipo a la firma del Contrato\n25% Al aviso de embarque\n20% Al aviso de entrega del equipo en obra\n05% Al aviso de entrega en funcionamiento',
-    deliveryTime:      'A confirmar tras anticipo',
-    warranty:          '12 meses en partes y mano de obra',
-    validity:          '30 días naturales',
-    generalConditions: 'Obra civil por cuenta del cliente.',
+    paymentMethod:      '50% Anticipo a la firma del Contrato\n25% Al aviso de embarque\n20% Al aviso de entrega del equipo en obra\n05% Al aviso de entrega en funcionamiento',
+    paymentMethodLabor: '50% A la firma de contrato\n25% Al aviso de inicio de instalación\n20% Al termino del montaje\n05% Al aviso de entrega funcionando',
+    deliveryTime:       'A confirmar tras anticipo',
+    warranty:           '12 meses en partes y mano de obra',
+    validity:           '30 días naturales',
+    generalConditions:  'Obra civil por cuenta del cliente.',
   };
 
   const opts = q.pdf_options ?? {};
@@ -438,29 +442,62 @@ export function QuotePDFDocument({
             </View>
 
             {/* Columna derecha */}
-            <View style={{ width: 130, alignItems: 'center', paddingTop: 16 }}>
+            <View style={{ width: 158, alignItems: 'center', paddingTop: 16 }}>
               <Image
                 src={elevatorImage(q.model)}
-                style={{ width: 120, height: cabinImage ? 180 : 250, objectFit: 'contain' }}
+                style={{ width: 154, height: cabinImage ? 175 : 250, objectFit: 'contain' }}
               />
-              <Text style={{ fontSize: 8.5, color: NAVY, fontFamily: PJSansBold, marginTop: 5, textAlign: 'center' }}>
+              <Text style={{ fontSize: 8.5, color: NAVY, fontFamily: PJSansBold, marginTop: 4, textAlign: 'center' }}>
                 {modelLabel}
               </Text>
 
               {cabinImage ? (
-                <View style={{ marginTop: 10, alignItems: 'center', width: '100%' }}>
-                  <View style={{ width: '100%', height: 1, backgroundColor: GOLD, marginBottom: 6 }} />
-                  <Text style={{ fontSize: 8, color: GRAY, fontFamily: PJSansBold, textAlign: 'center', letterSpacing: 0.2, marginBottom: 5, textTransform: 'uppercase' }}>
+                <View style={{ marginTop: 8, alignItems: 'center', width: '100%' }}>
+                  <View style={{ width: '100%', height: 1, backgroundColor: GOLD, marginBottom: 5 }} />
+                  <Text style={{ fontSize: 8, color: GRAY, fontFamily: PJSansBold, textAlign: 'center', letterSpacing: 0.2, marginBottom: 4, textTransform: 'uppercase' }}>
                     Diseño de cabina
                   </Text>
                   <Image
                     src={cabinImage}
-                    style={{ width: 118, height: 148, objectFit: 'contain', borderRadius: 3 }}
+                    style={{ width: 154, height: 175, objectFit: 'cover', borderRadius: 4 }}
                   />
                 </View>
               ) : null}
             </View>
           </View>
+
+          {/* ── Materiales seleccionados ── */}
+          {(wallImg || floorImg || plafonImg) && (
+            <View style={{ marginTop: 12 }}>
+              <View style={{ height: 1, backgroundColor: GOLD, marginBottom: 8 }} />
+              <Text style={{ fontSize: 9, fontFamily: PJSansBold, color: NAVY, letterSpacing: 0.5, marginBottom: 8, textTransform: 'uppercase' }}>
+                Materiales seleccionados
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                {wallImg ? (
+                  <View style={{ alignItems: 'center', flex: 1 }}>
+                    <Image src={wallImg} style={{ width: 55, height: 55, objectFit: 'cover', borderRadius: 4, borderWidth: 1, borderColor: '#E0E0E0' }} />
+                    <Text style={{ fontSize: 9, color: GRAY, marginTop: 4, textAlign: 'center' }}>Acabado cabina</Text>
+                    <Text style={{ fontSize: 9.5, color: BLK, fontFamily: PJSansBold, textAlign: 'center' }}>{q.cabin_finish}</Text>
+                  </View>
+                ) : null}
+                {floorImg ? (
+                  <View style={{ alignItems: 'center', flex: 1 }}>
+                    <Image src={floorImg} style={{ width: 55, height: 55, objectFit: 'cover', borderRadius: 4, borderWidth: 1, borderColor: '#E0E0E0' }} />
+                    <Text style={{ fontSize: 9, color: GRAY, marginTop: 4, textAlign: 'center' }}>Piso de cabina</Text>
+                    <Text style={{ fontSize: 9.5, color: BLK, fontFamily: PJSansBold, textAlign: 'center' }}>{q.cabin_floor}</Text>
+                  </View>
+                ) : null}
+                {plafonImg ? (
+                  <View style={{ alignItems: 'center', flex: 1 }}>
+                    <Image src={plafonImg} style={{ width: 55, height: 55, objectFit: 'cover', borderRadius: 4, borderWidth: 1, borderColor: '#E0E0E0' }} />
+                    <Text style={{ fontSize: 9, color: GRAY, marginTop: 4, textAlign: 'center' }}>Plafón / COP</Text>
+                    <Text style={{ fontSize: 9.5, color: BLK, fontFamily: PJSansBold, textAlign: 'center' }}>{q.cop_model}</Text>
+                  </View>
+                ) : null}
+              </View>
+            </View>
+          )}
         </View>
 
         <View style={S.stripBot} /><View style={S.stripBot2} />
@@ -572,22 +609,39 @@ export function QuotePDFDocument({
           </View>
 
           <Text style={S.secNum}>5.  FORMAS DE PAGO</Text>
-          <View style={S.condTable}>
-            <View style={S.condHead}>
-              <Text style={S.condHCell}>Esquema de pagos</Text>
-            </View>
-            {(terms.paymentMethod || '50% Anticipo a la firma del Contrato\n25% Al aviso de embarque\n20% Al aviso de entrega del equipo en obra\n05% Al aviso de entrega en funcionamiento')
-              .split('\n')
-              .filter(line => line.trim())
-              .map((line, i) => (
-                <View key={i} style={[S.condRow, i % 2 === 1 ? { backgroundColor: LGRAY } : {}]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingHorizontal: 9, paddingVertical: 5 }}>
-                    <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: GOLD, marginRight: 7, flexShrink: 0 }} />
-                    <Text style={{ fontSize: 9.5, color: BLK, lineHeight: 1.5, flex: 1 }}>{line.trim()}</Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 9 }}>
+            {/* Tabla Equipo de Importación */}
+            <View style={{ flex: 1, borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 4, overflow: 'hidden' }}>
+              <View style={S.condHead}>
+                <Text style={S.condHCell}>Equipo de importación</Text>
+              </View>
+              {(terms.paymentMethod || '50% Anticipo a la firma del Contrato\n25% Al aviso de embarque\n20% Al aviso de entrega del equipo en obra\n05% Al aviso de entrega en funcionamiento')
+                .split('\n').filter(l => l.trim()).map((line, i) => (
+                  <View key={i} style={[S.condRow, i % 2 === 1 ? { backgroundColor: LGRAY } : {}]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingHorizontal: 7, paddingVertical: 4 }}>
+                      <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: GOLD, marginRight: 6, flexShrink: 0 }} />
+                      <Text style={{ fontSize: 8.5, color: BLK, lineHeight: 1.5, flex: 1 }}>{line.trim()}</Text>
+                    </View>
                   </View>
-                </View>
-              ))
-            }
+                ))
+              }
+            </View>
+            {/* Tabla Mano de Obra */}
+            <View style={{ flex: 1, borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 4, overflow: 'hidden' }}>
+              <View style={S.condHead}>
+                <Text style={S.condHCell}>Mano de obra</Text>
+              </View>
+              {(terms.paymentMethodLabor || '50% A la firma de contrato\n25% Al aviso de inicio de instalación\n20% Al termino del montaje\n05% Al aviso de entrega funcionando')
+                .split('\n').filter(l => l.trim()).map((line, i) => (
+                  <View key={i} style={[S.condRow, i % 2 === 1 ? { backgroundColor: LGRAY } : {}]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingHorizontal: 7, paddingVertical: 4 }}>
+                      <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: GOLD, marginRight: 6, flexShrink: 0 }} />
+                      <Text style={{ fontSize: 8.5, color: BLK, lineHeight: 1.5, flex: 1 }}>{line.trim()}</Text>
+                    </View>
+                  </View>
+                ))
+              }
+            </View>
           </View>
 
           <Text style={S.secNum}>6.  VALIDEZ DE LA PROPUESTA</Text>
@@ -598,7 +652,7 @@ export function QuotePDFDocument({
           </View>
 
           {/* Firma */}
-          <View style={{ marginTop: 18, alignItems: 'flex-end' }}>
+          <View style={{ marginTop: 8, alignItems: 'flex-end' }}>
             <Text style={{ fontSize: 9.5, color: GRAY, marginBottom: 2 }}>Atentamente,</Text>
             <Text style={{ fontSize: 12, fontFamily: PJSansBold, color: NAVY }}>{seller}</Text>
             <Text style={{ fontSize: 9.5, color: GRAY }}>{sellerTitle}</Text>

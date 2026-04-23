@@ -30,7 +30,7 @@ const getModelColor = (model: string) => {
 
 const STATUS_LABELS: Record<QuoteStatus, string> = {
   'Borrador':       'BORRADOR',
-  'Enviada':        'ENVIADA',
+  'En progreso':    'EN PROGRESO',
   'En Negociación': 'NEGOCIACIÓN',
   'Ganada':         'GANADA',
   'Perdida':        'PERDIDA',
@@ -39,7 +39,7 @@ const STATUS_LABELS: Record<QuoteStatus, string> = {
 
 const STATUS_CSS: Record<QuoteStatus, string> = {
   'Borrador':       'bg-gray-100 text-gray-500',
-  'Enviada':        'bg-blue-50 text-blue-700',
+  'En progreso':    'bg-blue-50 text-blue-700',
   'En Negociación': 'bg-amber-50 text-amber-700',
   'Ganada':         'bg-emerald-50 text-emerald-700',
   'Perdida':        'bg-red-50 text-red-600',
@@ -59,7 +59,7 @@ export default function Dashboard({ onNewQuote, onEditQuote, onOpenDetail }: Pro
   const fmt    = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
   const fmtCmp = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', notation: 'compact', maximumFractionDigits: 1 });
 
-  const abiertas   = quotes.filter(q => ['Borrador','Enviada','En Negociación'].includes(q.status));
+  const abiertas   = quotes.filter(q => ['Borrador','En progreso','En Negociación'].includes(q.status));
   const ganadas    = quotes.filter(q => q.status === 'Ganada');
   const pipeline   = abiertas.reduce((s, q) => s + (q.price||0)*q.quantity, 0);
   const ventas     = ganadas.reduce((s,  q) => s + (q.price||0)*q.quantity, 0);
@@ -72,7 +72,7 @@ export default function Dashboard({ onNewQuote, onEditQuote, onOpenDetail }: Pro
     const ms = !search ||
       q.client_name.toLowerCase().includes(search.toLowerCase()) ||
       q.folio.toLowerCase().includes(search.toLowerCase());
-    if (filter === 'Abiertas') return ms && ['Borrador','Enviada','En Negociación'].includes(q.status);
+    if (filter === 'Abiertas') return ms && ['Borrador','En progreso','En Negociación'].includes(q.status);
     if (filter === 'Ganadas')  return ms && q.status === 'Ganada';
     if (filter === 'Perdidas') return ms && q.status === 'Perdida';
     return ms;

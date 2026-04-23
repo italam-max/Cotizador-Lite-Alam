@@ -27,13 +27,13 @@ interface Props {
 
 const STATUS_CFG: Record<QuoteStatus, { label: string; cls: string; icon: any; dot: string; bg: string }> = {
   'Borrador':       { label: 'Borrador',       cls: 'bg-slate-100 text-slate-600 border-slate-200',     icon: FileText,   dot: '#94a3b8', bg: '#f8fafc' },
-  'Enviada':        { label: 'Enviada',         cls: 'bg-blue-50 text-blue-700 border-blue-200',          icon: Send,       dot: '#3b82f6', bg: '#eff6ff' },
+  'En progreso':    { label: 'En progreso',      cls: 'bg-blue-50 text-blue-700 border-blue-200',          icon: Send,       dot: '#3b82f6', bg: '#eff6ff' },
   'En Negociación': { label: 'En Negociación',  cls: 'bg-amber-50 text-amber-700 border-amber-200',       icon: TrendingUp, dot: '#f59e0b', bg: '#fffbeb' },
   'Ganada':         { label: 'Ganada ✓',        cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: Award,      dot: '#10b981', bg: '#f0fdf4' },
   'Perdida':        { label: 'Perdida',         cls: 'bg-red-50 text-red-600 border-red-200',             icon: XCircle,    dot: '#ef4444', bg: '#fef2f2' },
   'Cancelada':      { label: 'Cancelada',       cls: 'bg-gray-100 text-gray-500 border-gray-200',         icon: Ban,        dot: '#9ca3af', bg: '#f9fafb' },
 };
-const PIPELINE: QuoteStatus[] = ['Borrador','Enviada','En Negociación','Ganada','Perdida','Cancelada'];
+const PIPELINE: QuoteStatus[] = ['Borrador','En progreso','En Negociación','Ganada','Perdida','Cancelada'];
 
 const fmt    = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
 const fmtCmp = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', notation: 'compact', maximumFractionDigits: 1 });
@@ -88,6 +88,7 @@ function PDFButton({ quote, sellerName, sellerTitle }: { quote: Quote; sellerNam
       const toAbs  = (p: string) => p ? `${origin}${p}` : '';
       const element = React.createElement(QuotePDFDocument as any, {
         quote, seller: sellerName, sellerTitle,
+        cabinImage: `${origin}/catalog/cabin/Cabina-Pasajeros.png`,
         wallImg: toAbs(wallItem?.img || ''), floorImg: toAbs(floorItem?.img || ''), plafonImg: toAbs(plafonItem?.img || ''),
       });
       const contentBlob = await pdf(element as any).toBlob();
@@ -177,7 +178,7 @@ function OdooButton({ quote }: { quote: Quote }) {
             boxShadow: status === 'ok' ? 'none' : '0 4px 14px rgba(124,58,237,0.3)',
           }}>
           {loading ? <><Loader2 size={15} className="animate-spin" /> Enviando…</>
-            : status === 'ok' ? <><CheckCircle2 size={15} /> Enviado a Odoo</>
+            : status === 'ok' ? <><CheckCircle2 size={15} /> En progreso</>
             : <><Zap size={15} /> Enviar al CRM</>}
         </button>
         {msg && (
@@ -253,7 +254,7 @@ function SendEmailButton({ quote, sellerName, sellerTitle }: { quote: Quote; sel
         <button onClick={handleSend} disabled={loading || status === 'ok'}
           className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-black uppercase tracking-wide transition-all disabled:opacity-50"
           style={{ background: status === 'ok' ? '#10b981' : '#0A2463', color: 'white', fontFamily: "'Syne', sans-serif" }}>
-          {loading ? <><Loader2 size={15} className="animate-spin" /> Enviando…</> : status === 'ok' ? '✓ Enviado' : <><Mail size={15} /> Enviar correo</>}
+          {loading ? <><Loader2 size={15} className="animate-spin" /> Enviando…</> : status === 'ok' ? 'En progreso' : <><Mail size={15} /> Enviar correo</>}
         </button>
         {msg && <p className={`text-xs text-center font-medium ${status === 'ok' ? 'text-emerald-600' : 'text-red-500'}`}>{msg}</p>}
       </div>
@@ -628,9 +629,6 @@ export default function QuoteDetail({
                   <div className="flex gap-2">
                     <PDFButton quote={current} sellerName={sellerName} sellerTitle={sellerTitle} />
                   </div>
-
-                  {/* Odoo CRM */}
-                  <OdooButton quote={current} />
 
                   {/* Email si tiene */}
                   {current.client_email && (

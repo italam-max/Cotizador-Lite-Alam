@@ -10,7 +10,7 @@
 // 8. Notas internas conservadas
 // 9. Al guardar → vista previa PDF antes de descargar/enviar
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ArrowLeft, ArrowRight, Save, Loader2,
   User, Settings2, DollarSign, AlertTriangle,
@@ -243,6 +243,8 @@ function PDFPreviewModal({
 // ══════════════════════════════════════════════════════════
 export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onCancel, onToastSuccess, onToastError }: Props) {
   const [step,       setStep]       = useState(1);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { scrollRef.current?.scrollTo({ top: 0, behavior: 'instant' }); }, [step]);
   const [form,       setForm]       = useState<FormData>(() => (quote ? { ...EMPTY_QUOTE, ...quote } : { ...EMPTY_QUOTE, owner_id: '' }) as FormData);
   const [saving,     setSaving]     = useState(false);
   const [errors,     setErrors]     = useState<{ field: string; msg: string }[]>([]);
@@ -372,7 +374,7 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
       // NO se sobreescribe con descripción — así QuoteDetail puede parsear los extras correctamente
       const dataToSave = {
         ...form,
-        status:      'Enviada' as const,
+        status:      'En progreso' as const,
         pdf_options: pdfOptions,
       };
       let saved: Quote;
@@ -482,7 +484,7 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
       </div>
 
       {/* CUERPO */}
-      <div className="flex-1 overflow-y-auto relative z-10 px-3 sm:px-6 py-4 sm:py-6">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto relative z-10 px-3 sm:px-6 py-4 sm:py-6">
         <div className="max-w-3xl mx-auto space-y-4 sm:space-y-5">
 
           {/* ════ PASO 1 ════ */}
@@ -787,34 +789,6 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
                     width={70} height={52}
                   />
 
-                  {/* ── CONFIGURADOR VISUAL DE CABINA ── */}
-                  <div className="col-span-2">
-                    <label className="flex items-center justify-between mb-3">
-                      <span className="text-[13px] font-semibold text-[#0A2463]/65">
-                        Vista de cabina configurada
-                      </span>
-                      <span className="text-xs text-[#D4AF37] font-semibold">
-                        {cabinImage ? '✓ Capturada' : 'Captura para el PDF'}
-                      </span>
-                    </label>
-                    <CabinConfigurator
-                      wallFinish={form.cabin_finish || ''}
-                      wallImg={CABIN_WALLS.find(w => w.label === form.cabin_finish)?.img || ''}
-                      floorLabel={form.cabin_floor || ''}
-                      floorImg={FLOOR_FINISHES.find(f => f.label === form.cabin_floor)?.img || ''}
-                      plafonId={form.cop_model || 'LV-29'}
-                      plafonImg={PLAFONOS.find(p => p.id === form.cop_model)?.img || ''}
-                      extras={(() => { try { return JSON.parse(form.cabin_model || '[]'); } catch { return []; } })()}
-                      onCapture={img => setCabinImage(img)}
-                    />
-                    {cabinImage && (
-                      <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
-                        style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', color: '#065f46' }}>
-                        <span className="font-bold">✓</span>
-                        Imagen lista — se incluirá automáticamente en la página de cabina del PDF
-                      </div>
-                    )}
-                  </div>
 
                   <Field label="Normativa aplicable">
                     <select className={SELECT} value={form.norm}
@@ -930,7 +904,7 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
                     </select>
                   </Field>
                   <Field label="Estado al guardar">
-                    <input className={INPUT_RO + ' text-blue-700 font-semibold'} value="Enviada (automático)" readOnly />
+                    <input className={INPUT_RO + ' text-blue-700 font-semibold'} value="En progreso (automático)" readOnly />
                   </Field>
 
                 </div>
@@ -1017,19 +991,31 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
                       placeholder="15 días naturales" />
                   </Field>
 
-                  {/* ── Calendario de pagos — editable ── */}
-                  <Field label="Calendario de pagos" hint="Una línea por concepto — aparece en PDF">
+                  {/* ── Calendario de pagos: Equipo ── */}
+                  <Field label="Formas de pago — Equipo de importación" hint="Una línea por concepto — aparece en PDF">
                     <textarea
-                      rows={5}
+                      rows={4}
                       className={INPUT + ' resize-none text-xs font-mono leading-relaxed'}
                       value={
                         form.commercial_terms?.paymentMethod ||
                         '50% Anticipo a la firma del Contrato\n25% Al aviso de embarque\n20% Al aviso de entrega del equipo en obra\n05% Al aviso de entrega en funcionamiento'
                       }
                       onChange={e => update({ commercial_terms: { ...form.commercial_terms!, paymentMethod: e.target.value } })}
-                      placeholder={
-                        '50% Anticipo a la firma del Contrato\n25% Al aviso de embarque\n20% Al aviso de entrega del equipo en obra\n05% Al aviso de entrega en funcionamiento'
+                      placeholder="50% Anticipo a la firma del Contrato&#10;25% Al aviso de embarque&#10;20% Al aviso de entrega del equipo en obra&#10;05% Al aviso de entrega en funcionamiento"
+                    />
+                  </Field>
+
+                  {/* ── Calendario de pagos: Mano de obra ── */}
+                  <Field label="Formas de pago — Mano de obra" hint="Una línea por concepto — aparece en PDF">
+                    <textarea
+                      rows={4}
+                      className={INPUT + ' resize-none text-xs font-mono leading-relaxed'}
+                      value={
+                        form.commercial_terms?.paymentMethodLabor ||
+                        '50% A la firma de contrato\n25% Al aviso de inicio de instalación\n20% Al termino del montaje\n05% Al aviso de entrega funcionando'
                       }
+                      onChange={e => update({ commercial_terms: { ...form.commercial_terms!, paymentMethodLabor: e.target.value } })}
+                      placeholder="50% A la firma de contrato&#10;25% Al aviso de inicio de instalación&#10;20% Al termino del montaje&#10;05% Al aviso de entrega funcionando"
                     />
                   </Field>
 

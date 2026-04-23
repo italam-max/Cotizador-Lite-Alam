@@ -141,7 +141,7 @@ export default function AppShell({
         <p
           className="text-[9px] font-mono whitespace-nowrap overflow-hidden transition-all duration-200"
           style={{ color: 'rgba(255,255,255,0.2)', opacity: expanded ? 1 : 0 }}>
-          2.1.1 | ALAMEX
+          2.1.2 | ALAMEX
         </p>
         {!expanded && (
           <div className="w-4 h-0.5 rounded-full mx-auto" style={{ background: 'rgba(255,255,255,0.1)' }} />

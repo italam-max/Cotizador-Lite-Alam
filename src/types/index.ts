@@ -22,7 +22,8 @@ export const EMPTY_QUOTE: FormQuote = {
   price: 0, currency: 'MXN', system_type: 'Simplex', labor_price: null, installation_city: '',
   internal_notes: '',
   commercial_terms: {
-    paymentMethod: '50% Anticipo a la firma del Contrato\n25% Al aviso de embarque\n20% Al aviso de entrega del equipo en obra\n05% Al aviso de entrega en funcionamiento',
+    paymentMethod:      '50% Anticipo a la firma del Contrato\n25% Al aviso de embarque\n20% Al aviso de entrega del equipo en obra\n05% Al aviso de entrega en funcionamiento',
+    paymentMethodLabor: '50% A la firma de contrato\n25% Al aviso de inicio de instalación\n20% Al termino del montaje\n05% Al aviso de entrega funcionando',
     deliveryTime: 'A confirmar tras anticipo',
     warranty: '12 meses en partes y mano de obra',
     validity: '30 días naturales', currency: 'MXN',
