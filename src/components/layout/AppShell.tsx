@@ -1,5 +1,5 @@
 // ARCHIVO: src/components/layout/AppShell.tsx
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useState, useEffect, useRef } from 'react';
 import {
   LayoutDashboard, Plus, Kanban, LogOut, User,
   Shield, ChevronRight, Users, Menu, X,
@@ -31,6 +31,33 @@ export default function AppShell({
   const safeName    = displayName || '';
   const initial     = safeName.charAt(0).toUpperCase();
   const isQuoteView = currentView.includes('quote') || currentView === 'detail';
+
+  // ── Easter egg — Noricosky ──────────────────────────────────
+  const [eggClicks, setEggClicks] = useState(0);
+  const [eggOpen,   setEggOpen]   = useState(false);
+  const [eggFloor,  setEggFloor]  = useState('PB');
+  const eggTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const FLOORS = ['PB','1','2','3','4','5','6','N','R','K','NRK'];
+
+  const handleVersionClick = () => {
+    const next = eggClicks + 1;
+    setEggClicks(next);
+    if (eggTimer.current) clearTimeout(eggTimer.current);
+    eggTimer.current = setTimeout(() => setEggClicks(0), 2000);
+    if (next >= 7) {
+      setEggClicks(0);
+      setEggFloor('PB');
+      setEggOpen(true);
+      let i = 0;
+      const climb = setInterval(() => {
+        i++;
+        setEggFloor(FLOORS[i] ?? 'NRK');
+        if (i >= FLOORS.length - 1) clearInterval(climb);
+      }, 160);
+    }
+  };
+
+  useEffect(() => () => { if (eggTimer.current) clearTimeout(eggTimer.current); }, []);
 
   const handleNav = (v: View) => {
     setMobileOpen(false);
@@ -136,8 +163,9 @@ export default function AppShell({
       </nav>
 
       {/* Version */}
-      <div className="px-3 py-3 shrink-0 relative z-10 overflow-hidden"
-        style={{ borderTop: '1px solid rgba(212,175,55,0.1)' }}>
+      <div className="px-3 py-3 shrink-0 relative z-10 overflow-hidden cursor-default"
+        style={{ borderTop: '1px solid rgba(212,175,55,0.1)' }}
+        onClick={handleVersionClick}>
         <p
           className="text-[9px] font-mono whitespace-nowrap overflow-hidden transition-all duration-200"
           style={{ color: 'rgba(255,255,255,0.2)', opacity: expanded ? 1 : 0 }}>
@@ -147,6 +175,50 @@ export default function AppShell({
           <div className="w-4 h-0.5 rounded-full mx-auto" style={{ background: 'rgba(255,255,255,0.1)' }} />
         )}
       </div>
+
+      {/* Easter egg modal */}
+      {eggOpen && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center"
+          style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}
+          onClick={() => setEggOpen(false)}>
+          <div
+            className="relative flex flex-col items-center gap-3 rounded-2xl px-10 py-8 shadow-2xl"
+            style={{ background: '#0A1628', border: '1px solid rgba(245,197,24,0.3)', minWidth: 220 }}
+            onClick={e => e.stopPropagation()}>
+            {/* Panel display */}
+            <div className="flex flex-col items-center gap-1">
+              <div className="text-[10px] font-mono tracking-widest" style={{ color: 'rgba(245,197,24,0.5)' }}>
+                PISO
+              </div>
+              <div
+                className="font-mono font-black tabular-nums transition-all"
+                style={{ fontSize: 52, color: '#F5C518', lineHeight: 1, letterSpacing: 2, minWidth: 100, textAlign: 'center' }}>
+                {eggFloor}
+              </div>
+              <div className="text-[9px] font-mono" style={{ color: 'rgba(245,197,24,0.4)' }}>▲ SUBIENDO</div>
+            </div>
+            {/* Firma */}
+            {eggFloor === 'NRK' && (
+              <div className="text-center mt-2 animate-fade-in">
+                <p className="text-xs font-bold tracking-widest" style={{ color: '#F5C518' }}>NORICOSKY</p>
+                <p className="text-[10px] mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                  Diseñado &amp; construido · 2026
+                </p>
+                <p className="text-[9px] mt-0.5" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                  Elevadores Alamex · Cotizador v2.1.2
+                </p>
+              </div>
+            )}
+            <button
+              onClick={() => setEggOpen(false)}
+              className="mt-1 text-[10px] font-mono"
+              style={{ color: 'rgba(255,255,255,0.2)' }}>
+              [ cerrar ]
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 
