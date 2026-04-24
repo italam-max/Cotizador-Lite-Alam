@@ -278,7 +278,12 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
 
   const update = useCallback((fields: Partial<FormData>) => {
     setForm(prev => {
-      const next = { ...prev, ...fields };
+      // Cuando el usuario cambia las paradas, recalcular el recorrido automáticamente
+      // (no sobreescribe si el usuario edita el recorrido directamente)
+      const withTravel = 'stops' in fields
+        ? { travel: ((fields.stops ?? prev.stops) - 1) * 3000, ...fields }
+        : fields;
+      const next = { ...prev, ...withTravel };
       const techKeys = ['capacity','stops','speed','model','quantity','use_type','door_side'] as const;
       const isTech = techKeys.some(k => k in fields);
 

@@ -164,8 +164,8 @@ export const computeDefaults = (current: Partial<Omit<Quote, 'id'|'created'|'upd
   const qty      = current.quantity ?? 1;
   const travel   = current.travel   ?? (stops - 1) * 3000;
 
-  // 1. Recorrido
-  if (!current.travel) out.travel = (stops - 1) * 3000;
+  // 1. Recorrido — solo para cotizaciones nuevas sin recorrido aún
+  if (!current.travel || current.travel === 0) out.travel = (stops - 1) * 3000;
 
   // 2. Personas
   out.persons = CAPACITY_PERSONS[capacity] ?? 8;
