@@ -296,15 +296,23 @@ export const CABIN_WALLS = [
 
 // ── Extras seleccionables de cabina ──────────────────────────
 export const CABIN_EXTRAS = [
-  { id: 'panoramico',      label: 'Panel panorámico',    use: ['Pasajeros']           },
-  { id: 'espejo-trasero',  label: 'Espejo trasero',       use: ['Pasajeros']           },
-  { id: 'espejo-lateral',  label: 'Espejo lateral',       use: ['Pasajeros']           },
-  { id: 'pasamanos-inox',  label: 'Pasamanos INOX',       use: ['Pasajeros','Carga']   },
-  { id: 'pasamanos-crom',  label: 'Pasamanos Cromado',    use: ['Pasajeros']           },
-  { id: 'led-premium',     label: 'Iluminación LED',      use: ['Pasajeros','Carga']   },
+  { id: 'espejo-trasero',  label: 'Espejo trasero',  use: ['Pasajeros'] },
 ] as const;
 
 export type CabinExtraId = typeof CABIN_EXTRAS[number]['id'];
+
+// Posiciones disponibles para panel panorámico
+export const PANORAMIC_POSITIONS = [
+  { id: 'izquierdo', label: 'Izquierdo' },
+  { id: 'derecho',   label: 'Derecho'   },
+  { id: 'fondo',     label: 'Fondo'     },
+] as const;
+
+// Tipos de pasamanos — imágenes en /catalog/pasamanos/
+export const PASAMANOS_TYPES = [
+  { id: 'pasamanos-redondo',   label: 'Redondo',   use: ['Pasajeros','Carga'], img: '/catalog/pasamanos/redondo.jpg'   },
+  { id: 'pasamanos-cuadrado',  label: 'Cuadrado',  use: ['Pasajeros','Carga'], img: '/catalog/pasamanos/cuadrado.jpg'  },
+] as const;
 
 /** Genera la descripción de cabina a partir de los atributos seleccionados */
 export function buildCabinDescription(
@@ -316,12 +324,12 @@ export function buildCabinDescription(
 ): string {
   const parts: string[] = [];
   if (walls)  parts.push(`Cabina ${walls}`);
-  if (extras.includes('panoramico'))     parts.push('panel panorámico');
+  const panPositions = ['izquierdo','derecho','fondo'].filter(p => extras.includes(`panoramico-${p}`));
+  if (panPositions.length === 3) parts.push('cabina panorámica completa');
+  else if (panPositions.length > 0) parts.push(`panel panorámico ${panPositions.join(', ')}`);
   if (extras.includes('espejo-trasero')) parts.push('espejo trasero');
-  if (extras.includes('espejo-lateral')) parts.push('espejo lateral');
-  if (extras.includes('pasamanos-inox')) parts.push('pasamanos INOX');
-  if (extras.includes('pasamanos-crom')) parts.push('pasamanos cromado');
-  if (extras.includes('led-premium'))    parts.push('iluminación LED premium');
+  if (extras.includes('pasamanos-redondo'))  parts.push('pasamanos redondo');
+  if (extras.includes('pasamanos-cuadrado')) parts.push('pasamanos cuadrado');
   if (floor)  parts.push(`piso ${floor}`);
   if (plafon) parts.push(`plafón ${plafon}`);
   if (useType === 'Carga' || useType === 'Montaplatos') parts.push('uso industrial');

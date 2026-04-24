@@ -38,35 +38,11 @@ const MODEL_LABELS: Record<string, string> = {
   'Home Lift': 'Home Lift Residencial',
 };
 
-// ── SEGURIDADES Y EXTRAS ─────────────────────────────────────
+// ── SEGURIDADES ADICIONALES ──────────────────────────────────
 export const TODAS_SEGURIDADES = [
   'Sistema de paracaídas',
   'Sensor de carga (báscula de sobrecarga)',
   'Sensor de velocidad',
-  'Cortina de luz',
-  'Rescate automático en caso de corte de luz',
-  'Sistema anti-incendio / Alarma de incendio',
-  'Sensor sísmico',
-  'Amortiguadores',
-  'Botón de alarma',
-  'Nivelación automática',
-  'Apagado automático de luz de cabina',
-  'Ventilador de cabina',
-  'Scanner de error (Español + 5 idiomas)',
-  'Botoneras Punto Matriz (COP y LOP)',
-  'Protección de atascamiento y recalentamiento del motor',
-  'Puerta abierta con botón de piso',
-];
-
-export const TODOS_EXTRAS_DESC = [
-  'Pasamanos',
-  'Rescate Automático',
-  'Sensor sísmico',
-  'Sensor de carga',
-  'Cortina de luz',
-  'Alarma incendio',
-  'Voz en off',
-  'Ventilador',
 ];
 
 // ── ESTILOS ──────────────────────────────────────────────────
@@ -224,15 +200,7 @@ export function QuotePDFDocument({
   };
 
   const opts = q.pdf_options ?? {};
-  const seguridadesActivas: string[] = opts.seguridades       ?? TODAS_SEGURIDADES;
-  const extrasDescActivos:  string[] = opts.extras_descripcion ?? TODOS_EXTRAS_DESC;
-  const mostrarNormativa              = opts.mostrar_normativa  ?? true;
-  const mostrarCalidad                = opts.mostrar_calidad    ?? true;
-  const mostrarVentajas               = opts.mostrar_ventajas   ?? true;
-
-  const extrasStr = extrasDescActivos.length > 0
-    ? ' / ' + extrasDescActivos.join(' / ')
-    : '';
+  const seguridadesActivas: string[] = opts.seguridades ?? TODAS_SEGURIDADES;
 
   return (
     <Document title={`Propuesta ${q.folio} — ${q.client_name}`} author="Elevadores Alamex">
@@ -288,7 +256,6 @@ export function QuotePDFDocument({
                   {q.cabin_floor  ? ` / Piso ${q.cabin_floor}`   : ''}
                   {q.cabin_finish ? ` / Cabina ${q.cabin_finish}` : ''}
                   {q.door_type    ? ` / Puertas ${q.door_type}`   : ''}
-                  {extrasStr}
                 </Text>
               </View>
               <Text style={[S.tblBold, { textAlign: 'right' }]}>{fmt.format(elevatorTotal)} {q.currency || 'MXN'}</Text>
@@ -426,11 +393,20 @@ export function QuotePDFDocument({
                     const ex: string[] = JSON.parse(q.cabin_model || '[]');
                     if (Array.isArray(ex) && ex.length > 0) {
                       const EL: Record<string, string> = {
-                        'espejo-trasero': 'Espejo fondo', 'espejo-lateral': 'Espejo lateral',
-                        'pasamanos-inox': 'Pasam. INOX', 'pasamanos-crom': 'Pasam. cromado',
-                        'led-premium': 'LED Premium', 'panoramico': 'Panel panorámico',
+                        'espejo-trasero':     'Espejo fondo',
+                        'pasamanos-redondo':  'Pasam. redondo',
+                        'pasamanos-cuadrado': 'Pasam. cuadrado',
                       };
-                      return <Spec label="ACCESORIOS CABINA" value={ex.map(e => EL[e] || e).join(' / ')} />;
+                      const panPos = ['izquierdo','derecho','fondo'].filter(p => ex.includes(`panoramico-${p}`));
+                      const panLabel = panPos.length === 3
+                        ? 'Cabina panorámica completa'
+                        : panPos.length > 0
+                          ? `Panel panorámico (${panPos.join(', ')})`
+                          : null;
+                      const otherLabels = ex.filter(e => !e.startsWith('panoramico-')).map(e => EL[e] || e);
+                      const allLabels = [...(panLabel ? [panLabel] : []), ...otherLabels];
+                      if (allLabels.length === 0) return null;
+                      return <Spec label="ACCESORIOS CABINA" value={allLabels.join(' / ')} />;
                     }
                   } catch { /* sin extras */ }
                   return null;
@@ -522,45 +498,47 @@ export function QuotePDFDocument({
                 <Spec label="Acabado"           value={q.use_type === 'Pasajeros' ? 'Acero Inoxidable (INOX)' : 'Pintura Epóxica Industrial'} />
               </View>
 
-              {mostrarNormativa && (
-                <View style={S.infoBox}>
-                  <Text style={S.infoTitle}>Normativa aplicable — {q.norm || 'EN 81-20'}</Text>
-                  <Text style={S.infoText}>
-                    Nuestros equipos están diseñados y fabricados bajo los requerimientos de la norma{' '}
-                    <Text style={{ fontFamily: PJSansBold }}>{q.norm || 'EN 81-20'}</Text>{' '}
-                    y la normativa mexicana NOM-53.
-                  </Text>
-                </View>
-              )}
-
-              {mostrarCalidad && (
-                <View style={S.infoBox}>
-                  <Text style={S.infoTitle}>Calidad y estándares</Text>
-                  <Text style={S.infoText}>
-                    Cabinas construidas bajo los estándares NOM-53 y EN-81 para uso habitacional,
-                    residencial e industrial con alto rendimiento. Materiales de primera calidad.
-                  </Text>
-                </View>
-              )}
+              {/* Normativa EN 81-20 + NOM-053 — dato informativo compacto */}
+              <View style={S.infoBox}>
+                <Text style={S.infoTitle}>Normativa aplicable: EN 81-20 (Estándar) + NOM-053</Text>
+                {/* Bloque 1 */}
+                <Text style={[S.infoText, { fontFamily: PJSansBold, marginTop: 4 }]}>Seguridad en cabina y cubo</Text>
+                <Text style={S.infoText}>
+                  Cabina cerrada · Paracaídas de seguridad · Frenos automáticos · Iluminación de emergencia · Botón de paro (rojo, en techo)
+                </Text>
+                {/* Bloque 2 */}
+                <Text style={[S.infoText, { fontFamily: PJSansBold, marginTop: 4 }]}>Diseño e instalación</Text>
+                <Text style={S.infoText}>
+                  Puertas del cubo con chapa de seguridad (abre sin llave desde interior) · Dimensiones mínimas: 1.80 m × 0.70 m · Distancias libres en cubo
+                </Text>
+                {/* Bloque 3 */}
+                <Text style={[S.infoText, { fontFamily: PJSansBold, marginTop: 4 }]}>Señalización y documentación</Text>
+                <Text style={S.infoText}>
+                  Capacidad (kg), máx. personas y fabricante indicados de forma indeleble · Leyendas de advertencia en montacargas
+                </Text>
+                {/* Bloque 4 */}
+                <Text style={[S.infoText, { fontFamily: PJSansBold, marginTop: 4 }]}>Alcance y responsabilidad</Text>
+                <Text style={S.infoText}>
+                  Aplica a elevadores eléctricos de tracción nuevos · Responsable: contratista / empresa instaladora
+                </Text>
+              </View>
             </View>
 
             <View style={S.col}>
               {seguridadesActivas.length > 0 && (
                 <>
-                  <Text style={S.secTitle}>SEGURIDADES INCLUIDAS</Text>
+                  <Text style={S.secTitle}>SEGURIDADES ADICIONALES</Text>
                   {seguridadesActivas.map((s, i) => <Bullet key={i} text={s} />)}
                 </>
               )}
 
-              {mostrarVentajas && (
-                <View style={[S.infoBoxGold, { marginTop: seguridadesActivas.length > 0 ? 9 : 0 }]}>
-                  <Text style={S.infoTitle}>Ventajas del sistema ALAMEX</Text>
-                  <Bullet text="Bajo consumo de energía eléctrica" />
-                  <Bullet text="Mayor confort en arranque y frenado" />
-                  <Bullet text="Sistema de rescate automático integrado" />
-                  <Bullet text="Diagnóstico en español y 5 idiomas más" />
-                </View>
-              )}
+              <View style={[S.infoBoxGold, { marginTop: seguridadesActivas.length > 0 ? 9 : 0 }]}>
+                <Text style={S.infoTitle}>Ventajas del sistema ALAMEX</Text>
+                <Bullet text="Bajo consumo de energía eléctrica" />
+                <Bullet text="Mayor confort en arranque y frenado" />
+                <Bullet text="Sistema de rescate automático integrado" />
+                <Bullet text="Diagnóstico en español y 5 idiomas más" />
+              </View>
             </View>
 
           </View>

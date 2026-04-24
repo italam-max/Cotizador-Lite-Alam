@@ -313,10 +313,22 @@ export default function QuoteDetail({
 
   const extras: string[] = (() => { try { return JSON.parse(current.cabin_model || '[]'); } catch { return []; } })();
   const isExtrasJSON = Array.isArray(extras) && extras.length > 0 && typeof extras[0] === 'string' && extras[0].includes('-');
-  const extraLabels = isExtrasJSON ? extras.map((e: string) =>
-    ({ 'panoramico':'Panel panorámico','espejo-trasero':'Espejo trasero','espejo-lateral':'Espejo lateral',
-       'pasamanos-inox':'Pasamanos INOX','pasamanos-crom':'Pasamanos cromado','led-premium':'Iluminación LED' })[e] || e
-  ) : [];
+  const extraLabels: string[] = (() => {
+    if (!isExtrasJSON) return [];
+    const EL: Record<string,string> = {
+      'espejo-trasero': 'Espejo trasero',
+      'pasamanos-redondo': 'Pasamanos redondo',
+      'pasamanos-cuadrado': 'Pasamanos cuadrado',
+    };
+    const panPos = ['izquierdo','derecho','fondo'].filter(p => extras.includes(`panoramico-${p}`));
+    const panLabel = panPos.length === 3
+      ? 'Cabina panorámica completa'
+      : panPos.length > 0
+        ? `Panel panorámico (${panPos.join(', ')})`
+        : null;
+    const others = extras.filter(e => !e.startsWith('panoramico-')).map(e => EL[e] || e);
+    return [...(panLabel ? [panLabel] : []), ...others];
+  })();
 
   const MODEL_LABELS: Record<string, string> = {
     'MR': 'Con Cuarto de Máquinas', 'MRL-L': 'Sin Cuarto · Chasis L',

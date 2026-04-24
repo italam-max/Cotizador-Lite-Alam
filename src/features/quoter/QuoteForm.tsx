@@ -24,6 +24,7 @@ import {
   computeDefaults, getAllowedModels, getAllowedSpeeds,
   validate, CAPACITIES, CAPACITY_PERSONS,
   CABIN_WALLS, CABIN_EXTRAS, FLOOR_FINISHES, PLAFONOS,
+  PANORAMIC_POSITIONS, PASAMANOS_TYPES,
   generateFloorNomenclature, autoRails, autoTractionLabel
 } from '../../data/engineRules';
 import type { Quote } from '../../types';
@@ -256,6 +257,7 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
   useEffect(() => { scrollRef.current?.scrollTo({ top: 0, behavior: 'instant' }); }, [step]);
   const [form,       setForm]       = useState<FormData>(() => (quote ? { ...EMPTY_QUOTE, ...quote } : { ...EMPTY_QUOTE, owner_id: '' }) as FormData);
   const [saving,     setSaving]     = useState(false);
+  const [panDiagramOpen, setPanDiagramOpen] = useState(false);
   const [errors,     setErrors]     = useState<{ field: string; msg: string }[]>([]);
   const [warnings,   setWarnings]   = useState<{ field: string; msg: string }[]>([]);
   const [savedQuote, setSavedQuote] = useState<Quote | null>(null); // para modal PDF
@@ -379,7 +381,7 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
     if (errors.some(e => e.field === 'client_name')) { setStep(1); return; }
     setSaving(true);
     try {
-      // cabin_model guarda el JSON array de extras (["espejo-trasero","led-premium",...])
+      // cabin_model guarda el JSON array de extras (["espejo-trasero","panoramico-derecho-1",...])
       // NO se sobreescribe con descripción — así QuoteDetail puede parsear los extras correctamente
       const dataToSave = {
         ...form,
@@ -744,7 +746,160 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
                       <span className="text-[13px] font-semibold text-[#0A2463]/65">Extras de cabina</span>
                       <span className="text-xs text-[#0A2463]/40 font-medium">Selecciona los que apliquen</span>
                     </label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="flex flex-col gap-2">
+
+                      {/* ── Panel panorámico ── */}
+                      {(form.use_type || 'Pasajeros') === 'Pasajeros' && (() => {
+                        const currentExtras: string[] = (() => { try { return JSON.parse(form.cabin_model || '[]'); } catch { return []; } })();
+                        const hasPan = currentExtras.some(e => e.startsWith('panoramico-'));
+                        const isFullPan = ['izquierdo','derecho','fondo'].every(p => currentExtras.includes(`panoramico-${p}`));
+                        const isOpen = panDiagramOpen || hasPan;
+
+                        const togglePosition = (pos: string) => {
+                          const hasPos = currentExtras.includes(`panoramico-${pos}`);
+                          const next = hasPos
+                            ? currentExtras.filter(e => e !== `panoramico-${pos}`)
+                            : [...currentExtras, `panoramico-${pos}`];
+                          update({ cabin_model: JSON.stringify(next) });
+                        };
+
+                        const sel = {
+                          izquierdo: currentExtras.includes('panoramico-izquierdo'),
+                          derecho:   currentExtras.includes('panoramico-derecho'),
+                          fondo:     currentExtras.includes('panoramico-fondo'),
+                        };
+
+                        return (
+                          <div className="rounded-xl border-2 overflow-hidden"
+                            style={{ borderColor: hasPan ? '#0A2463' : '#e2e8f0' }}>
+                            {/* Header toggle */}
+                            <button type="button"
+                              onClick={() => {
+                                if (isOpen) {
+                                  const next = currentExtras.filter(e => !e.startsWith('panoramico-'));
+                                  update({ cabin_model: JSON.stringify(next) });
+                                  setPanDiagramOpen(false);
+                                } else {
+                                  setPanDiagramOpen(true);
+                                }
+                              }}
+                              className="flex items-center gap-3 px-4 py-3 w-full text-left transition-all"
+                              style={{ background: hasPan ? '#0A2463' : 'white' }}>
+                              <div className="w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0"
+                                style={{ borderColor: hasPan ? '#D4AF37' : '#cbd5e1', background: hasPan ? '#D4AF37' : 'transparent' }}>
+                                {hasPan && (
+                                  <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                                    <path d="M1 4L3.5 6.5L9 1" stroke="#0A2463" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
+                                )}
+                              </div>
+                              <span className="text-xs font-semibold" style={{ color: hasPan ? 'white' : '#0A2463' }}>
+                                Panel panorámico{isFullPan ? ' — Cabina panorámica completa' : hasPan ? ` — ${['izquierdo','derecho','fondo'].filter(p => sel[p as keyof typeof sel]).join(', ')}` : ''}
+                              </span>
+                            </button>
+
+                            {/* Diagrama SVG de planta */}
+                            {isOpen && (
+                              <div className="px-4 pt-3 pb-4 bg-white border-t border-[#0A2463]/10">
+                                <p className="text-[10px] font-semibold text-[#0A2463]/40 uppercase tracking-wide mb-2 text-center">
+                                  Vista superior · Toca las paredes para seleccionar
+                                </p>
+                                <div className="flex justify-center">
+                                  <svg viewBox="0 0 200 168" className="w-full max-w-[230px] select-none">
+
+                                    {/* ── Piso (fondo interior) ── */}
+                                    <rect x="36" y="36" width="128" height="86" fill="#f1f5f9"/>
+
+                                    {/* ── Vidrio de pared seleccionada (strip interior) ── */}
+                                    {sel.fondo     && <rect x="36"  y="36" width="128" height="9" fill="rgba(140,195,255,0.40)"/>}
+                                    {sel.izquierdo && <rect x="36"  y="36" width="9"   height="86" fill="rgba(140,195,255,0.40)"/>}
+                                    {sel.derecho   && <rect x="155" y="36" width="9"   height="86" fill="rgba(140,195,255,0.40)"/>}
+
+                                    {/* ── Pared FONDO (arriba) ── */}
+                                    <rect x="20" y="20" width="160" height="16" rx="3"
+                                      fill={sel.fondo ? '#0A2463' : '#dde3ed'}
+                                      style={{ cursor: 'pointer' }}
+                                      onClick={() => togglePosition('fondo')}/>
+                                    <text x="100" y="32" textAnchor="middle" fontSize="8.5" fontWeight="700"
+                                      fill={sel.fondo ? '#D4AF37' : '#64748b'} style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                                      FONDO{sel.fondo ? ' ✓' : ''}
+                                    </text>
+
+                                    {/* ── Pared IZQUIERDA ── */}
+                                    <rect x="20" y="36" width="16" height="86" rx="3"
+                                      fill={sel.izquierdo ? '#0A2463' : '#dde3ed'}
+                                      style={{ cursor: 'pointer' }}
+                                      onClick={() => togglePosition('izquierdo')}/>
+                                    <text x="28" y="79" textAnchor="middle" fontSize="8" fontWeight="700"
+                                      fill={sel.izquierdo ? '#D4AF37' : '#64748b'}
+                                      transform="rotate(-90 28 79)" style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                                      IZQ{sel.izquierdo ? ' ✓' : ''}
+                                    </text>
+
+                                    {/* ── Pared DERECHA ── */}
+                                    <rect x="164" y="36" width="16" height="86" rx="3"
+                                      fill={sel.derecho ? '#0A2463' : '#dde3ed'}
+                                      style={{ cursor: 'pointer' }}
+                                      onClick={() => togglePosition('derecho')}/>
+                                    <text x="172" y="79" textAnchor="middle" fontSize="8" fontWeight="700"
+                                      fill={sel.derecho ? '#D4AF37' : '#64748b'}
+                                      transform="rotate(90 172 79)" style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                                      DER{sel.derecho ? ' ✓' : ''}
+                                    </text>
+
+                                    {/* ── Esquinas ── */}
+                                    <rect x="20" y="20" width="16" height="16"
+                                      fill={(sel.fondo || sel.izquierdo) ? '#0A2463' : '#c8d0df'} rx="3"/>
+                                    <rect x="164" y="20" width="16" height="16"
+                                      fill={(sel.fondo || sel.derecho) ? '#0A2463' : '#c8d0df'} rx="3"/>
+                                    <rect x="20" y="122" width="16" height="16"
+                                      fill={sel.izquierdo ? '#0A2463' : '#c8d0df'} rx="3"/>
+                                    <rect x="164" y="122" width="16" height="16"
+                                      fill={sel.derecho ? '#0A2463' : '#c8d0df'} rx="3"/>
+
+                                    {/* ── Pared frontal (no clickable) — lados ── */}
+                                    <rect x="20"  y="122" width="50" height="16" rx="3" fill="#c8d0df"/>
+                                    <rect x="130" y="122" width="50" height="16" rx="3" fill="#c8d0df"/>
+
+                                    {/* ── Apertura de puerta ── */}
+                                    <rect x="70" y="122" width="60" height="16" fill="none"
+                                      stroke="#D4AF37" strokeWidth="1.5" strokeDasharray="4,3" rx="2"/>
+                                    <text x="100" y="133" textAnchor="middle" fontSize="7.5" fill="#D4AF37"
+                                      fontWeight="700" style={{ pointerEvents: 'none', userSelect: 'none' }}>PUERTA</text>
+
+                                    {/* ── Etiqueta interior ── */}
+                                    <text x="100" y="78" textAnchor="middle" fontSize="9.5" fill="#94a3b8"
+                                      fontWeight="500" style={{ pointerEvents: 'none', userSelect: 'none' }}>CABINA</text>
+
+                                    {/* ── Badge panorámica completa ── */}
+                                    {isFullPan && (
+                                      <text x="100" y="94" textAnchor="middle" fontSize="8" fill="#0A2463"
+                                        fontWeight="700" style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                                        ✦ Panorámica completa
+                                      </text>
+                                    )}
+
+                                    {/* ── Flecha norte (orientación) ── */}
+                                    <text x="193" y="30" textAnchor="middle" fontSize="7" fill="#94a3b8"
+                                      style={{ pointerEvents: 'none', userSelect: 'none' }}>N</text>
+                                    <line x1="193" y1="33" x2="193" y2="44" stroke="#cbd5e1" strokeWidth="1.5"/>
+                                    <polygon points="193,33 190,39 196,39" fill="#cbd5e1"/>
+
+                                    {/* ── Indicador de dirección vista ── */}
+                                    <text x="100" y="158" textAnchor="middle" fontSize="7" fill="#cbd5e1"
+                                      style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                                      ← vista desde arriba →
+                                    </text>
+
+                                  </svg>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+
+                      {/* ── Otros extras simples ── */}
                       {CABIN_EXTRAS.filter(e => (e.use as readonly string[]).includes(form.use_type || 'Pasajeros')).map(extra => {
                         const currentExtras: string[] = (() => { try { return JSON.parse(form.cabin_model || '[]'); } catch { return []; } })();
                         const isSelected = currentExtras.includes(extra.id);
@@ -775,6 +930,47 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
                     </div>
                   </div>
 
+                  {/* ── PASAMANOS ── */}
+                  <div className="col-span-2">
+                    <label className="flex items-center justify-between mb-3">
+                      <span className="text-[13px] font-semibold text-[#0A2463]/65">Pasamanos</span>
+                      <span className="text-xs text-[#0A2463]/40 font-medium">Tipo de perfil</span>
+                    </label>
+                    <div className="flex gap-2">
+                      {PASAMANOS_TYPES.filter(p => (p.use as readonly string[]).includes(form.use_type || 'Pasajeros')).map(tipo => {
+                        const currentExtras: string[] = (() => { try { return JSON.parse(form.cabin_model || '[]'); } catch { return []; } })();
+                        const isSelected = currentExtras.includes(tipo.id);
+                        return (
+                          <button key={tipo.id} type="button"
+                            onClick={() => {
+                              const withoutPas = currentExtras.filter(e => !e.startsWith('pasamanos-'));
+                              const next = isSelected ? withoutPas : [...withoutPas, tipo.id];
+                              update({ cabin_model: JSON.stringify(next) });
+                            }}
+                            className="flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all"
+                            style={{ borderColor: isSelected ? '#D4AF37' : '#e2e8f0', background: isSelected ? '#FFF8E7' : 'white', minWidth: 90 }}>
+                            <div className="w-[70px] h-[52px] rounded-lg overflow-hidden bg-[#f1f5f9] flex items-center justify-center">
+                              <img src={tipo.img} alt={tipo.label}
+                                className="w-full h-full object-cover"
+                                onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                              />
+                            </div>
+                            <span className="text-[11px] font-semibold" style={{ color: isSelected ? '#0A2463' : '#64748b' }}>
+                              {tipo.label}
+                            </span>
+                            {isSelected && (
+                              <div className="w-full flex justify-center">
+                                <div className="w-4 h-4 rounded-full flex items-center justify-center" style={{ background: '#D4AF37' }}>
+                                  <svg width="8" height="6" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#0A2463" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                </div>
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   {/* ── PISO DE CABINA ── */}
                   <CatalogPicker
                     title="Piso de cabina"
@@ -797,15 +993,12 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
                   />
 
 
-                  <Field label="Normativa aplicable">
-                    <select className={SELECT} value={form.norm}
-                      onChange={e => update({ norm: e.target.value })}>
-                      <option value="EN 81-20">EN 81-20 (estándar)</option>
-                      <option value="EN 81-1">EN 81-1</option>
-                      <option value="ASME A17.1">ASME A17.1</option>
-                      <option value="NOM-053">NOM-053</option>
-                    </select>
-                  </Field>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[11px] font-semibold text-[#0A2463]/50 uppercase tracking-wide">Normativa aplicable</span>
+                    <div className="px-3 py-2 rounded-xl bg-[#EBF0FB] border border-[#0A2463]/10 text-xs font-semibold text-[#0A2463]">
+                      EN 81-20 (Estándar) · NOM-053
+                    </div>
+                  </div>
                 </div>
 
                 {/* Especificaciones técnicas editables */}
