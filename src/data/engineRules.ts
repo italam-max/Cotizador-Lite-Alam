@@ -55,6 +55,18 @@ const DIM_TABLE: { speed: number; model: ModelId; pit: number; overhead: number 
   { speed: 4.0,  model: 'MR',    pit: 2500, overhead: 5500 },
 ];
 
+// ─── TOPES DE VELOCIDAD POR MODELO (límite físico del equipo) ────────────────
+// Independientes de la capacidad — la velocidad la gobierna el trayecto, no la carga.
+const MODEL_MAX_SPEED: Record<string, number> = {
+  'MRL-L':     1.0,
+  'MRL-G':     2.5,
+  'MR':        4.0,
+  'HYD':       0.6,
+  'Home Lift': 0.6,
+};
+export const getModelMaxSpeed = (model: ModelId): number =>
+  MODEL_MAX_SPEED[model] ?? 4.0;
+
 // ─── HELPERS ────────────────────────────────────────────────
 
 export const getDims = (speed: number, model: ModelId) => {
@@ -74,13 +86,40 @@ export const getShaftRule = (capacity: number, model?: ModelId) => {
   return SHAFT_RULES.find(r => capacity >= r.minKg && capacity <= r.maxKg);
 };
 
-/** Velocidad mínima recomendada por EN 81 según número de paradas */
+/** @deprecated — reemplazado por minSpeedForTravel */
 export const minSpeedForStops = (stops: number): number => {
   if (stops > 30) return 2.5;
   if (stops > 20) return 2.0;
   if (stops > 15) return 1.75;
   if (stops > 10) return 1.6;
   if (stops > 6)  return 1.0;
+  return 0.6;
+};
+
+/**
+ * Velocidad mínima recomendada por TRAYECTO — estándar industria (EN 81-20 + práctica MX)
+ * A mayor recorrido, mayor velocidad mínima para mantener tiempos de viaje razonables.
+ */
+export const minSpeedForTravel = (travelMm: number): number => {
+  if (travelMm > 75_000) return 2.5;  // > 75 m
+  if (travelMm > 60_000) return 2.0;  // > 60 m
+  if (travelMm > 45_000) return 1.75; // > 45 m
+  if (travelMm > 30_000) return 1.6;  // > 30 m
+  if (travelMm > 18_000) return 1.0;  // > 18 m
+  return 0.6;                          // ≤ 18 m
+};
+
+/**
+ * Velocidad ideal a sugerir automáticamente según trayecto.
+ * Basado en estándar industria: v (m/s) ≈ recorrido / 20.
+ */
+export const recommendedSpeedForTravel = (travelMm: number): number => {
+  if (travelMm > 75_000) return 3.0;
+  if (travelMm > 60_000) return 2.5;
+  if (travelMm > 45_000) return 2.0;
+  if (travelMm > 30_000) return 1.75;
+  if (travelMm > 18_000) return 1.6;
+  if (travelMm > 12_000) return 1.0;
   return 0.6;
 };
 
@@ -125,8 +164,8 @@ export const computeDefaults = (current: Partial<Omit<Quote, 'id'|'created'|'upd
   const qty      = current.quantity ?? 1;
   const travel   = current.travel   ?? (stops - 1) * 3000;
 
-  // 1. Recorrido
-  if (!current.travel) out.travel = (stops - 1) * 3000;
+  // 1. Recorrido — solo para cotizaciones nuevas sin recorrido aún
+  if (!current.travel || current.travel === 0) out.travel = (stops - 1) * 3000;
 
   // 2. Personas
   out.persons = CAPACITY_PERSONS[capacity] ?? 8;
@@ -140,18 +179,21 @@ export const computeDefaults = (current: Partial<Omit<Quote, 'id'|'created'|'upd
   if ((model === 'MRL-G'||model==='MRL-L') && stops > 8) { model = 'MR'; out.model = model; }
   if ((model === 'HYD'||model==='Home Lift') && (travel > 12000 || stops > 3)) { model = 'MRL-G'; out.model = model; }
 
-  // 4. Velocidad
-  const shaftRule = getShaftRule(capacity, model);
-  const isHyd = model === 'HYD' || model === 'Home Lift';
-  const maxSpeed = isHyd ? 0.6 : (shaftRule?.maxSpeed ?? 1.0);
-  const minSpeed = isHyd ? 0.6 : minSpeedForStops(stops);
+  // 4. Velocidad — gobernada por TRAYECTO · techo por modelo (no por capacidad)
+  const isHyd     = model === 'HYD' || model === 'Home Lift';
+  const maxSpeed  = isHyd ? 0.6 : getModelMaxSpeed(model);
+  const minSpeed  = isHyd ? 0.6 : minSpeedForTravel(travel);
+  const recSpeed  = isHyd ? 0.6 : recommendedSpeedForTravel(travel);
   const currSpeed = parseFloat(String(current.speed ?? '0'));
   if (!current.speed || currSpeed < minSpeed || currSpeed > maxSpeed) {
-    const best = SPEEDS.map(parseFloat).filter(v => v >= minSpeed && v <= maxSpeed).sort((a, b) => a - b)[0];
-    out.speed = String(best ?? maxSpeed);
+    // Elegir la velocidad más cercana a la recomendada dentro del rango permitido
+    const candidates = SPEEDS.map(parseFloat).filter(v => v >= minSpeed && v <= maxSpeed);
+    const best = candidates.sort((a, b) => Math.abs(a - recSpeed) - Math.abs(b - recSpeed))[0];
+    out.speed = String(best ?? minSpeed);
   }
 
   // 5. Fosa y huida
+  const shaftRule = getShaftRule(capacity, model);
   const spd = parseFloat(String(out.speed ?? current.speed ?? 1.0));
   if (isHyd) {
     out.pit      = 1100;
@@ -162,7 +204,7 @@ export const computeDefaults = (current: Partial<Omit<Quote, 'id'|'created'|'upd
     out.overhead = dims.overhead;
   }
 
-  // 6. Cubo mínimo
+  // 6. Cubo mínimo (dimensiones siguen dependiendo de la capacidad — correcto)
   if (shaftRule && !isHyd) {
     if (!current.shaft_width  || current.shaft_width  < shaftRule.minWidth)  out.shaft_width  = shaftRule.minWidth;
     if (!current.shaft_depth  || current.shaft_depth  < shaftRule.minDepth)  out.shaft_depth  = shaftRule.minDepth;
@@ -231,14 +273,17 @@ export const validate = (q: Partial<Quote>): ValidationResult => {
     if (speed > 0.63)    err('speed',  `Hidráulico: máx. 0.6 m/s. Actual: ${speed} m/s`);
   }
 
-  // Velocidad
-  const minSpd = isHyd ? 0.6 : minSpeedForStops(stops);
-  const shRule = getShaftRule(capacity, model as ModelId);
-  const maxSpd = isHyd ? 0.6 : (shRule?.maxSpeed ?? 1.0);
-  if (speed < minSpd) err('speed', `Mín. ${minSpd} m/s para ${stops} paradas. Actual: ${speed} m/s`);
-  if (speed > maxSpd) err('speed', `Máx. ${maxSpd} m/s para ${capacity} kg. Actual: ${speed} m/s`);
+  // Velocidad — mínimo por trayecto, techo físico por modelo
+  const minSpd = isHyd ? 0.6 : minSpeedForTravel(travel);
+  const recSpd = isHyd ? 0.6 : recommendedSpeedForTravel(travel);
+  const maxSpd = isHyd ? 0.6 : getModelMaxSpeed(model as ModelId);
+  if (speed < minSpd)
+    warn('speed', `Velocidad baja para ${(travel/1000).toFixed(0)} m de recorrido. Recomendado: ≥ ${recSpd} m/s`);
+  if (speed > maxSpd)
+    err('speed', `Máx. ${maxSpd} m/s para el modelo ${model}. Actual: ${speed} m/s`);
 
   // Cubo
+  const shRule = getShaftRule(capacity, model as ModelId);
   if (shRule && !isHyd) {
     if ((q.shaft_width ?? 0) < shRule.minWidth)
       warn('shaft_width', `Cubo estrecho. Mín: ${shRule.minWidth} mm para ${capacity} kg`);
@@ -272,13 +317,25 @@ export const getAllowedModels = (capacity: number, stops: number, travel: number
     return true;
   });
 
-export const getAllowedSpeeds = (model: ModelId, capacity: number, stops: number): string[] => {
-  const isHyd = model === 'HYD' || model === 'Home Lift';
-  const shRule = getShaftRule(capacity, model);
-  const maxSpd = isHyd ? 0.6 : (shRule?.maxSpeed ?? 2.5);
-  const minSpd = isHyd ? 0.6 : minSpeedForStops(stops);
-  const valid = SPEEDS.filter(s => { const v = parseFloat(s); return v >= minSpd && v <= maxSpd; });
-  return valid.length > 0 ? valid : [String(maxSpd)];
+/**
+ * Velocidades disponibles para el selector del formulario.
+ * Mínimo gobernado por trayecto, máximo por capacidad del equipo.
+ */
+/**
+ * Velocidades disponibles para el selector del formulario.
+ * Mínimo gobernado por trayecto · techo físico por modelo (no por capacidad).
+ */
+/**
+ * Velocidades disponibles para el selector del formulario.
+ * Piso = velocidad RECOMENDADA para el trayecto (evita selección manual de velocidades inadecuadas).
+ * Techo = límite físico del modelo.
+ */
+export const getAllowedSpeeds = (model: ModelId, _capacity: number, _stops: number, travelMm = 15_000): string[] => {
+  const isHyd  = model === 'HYD' || model === 'Home Lift';
+  const maxSpd = isHyd ? 0.6 : getModelMaxSpeed(model);
+  const minSpd = isHyd ? 0.6 : recommendedSpeedForTravel(travelMm);
+  const valid  = SPEEDS.filter(s => { const v = parseFloat(s); return v >= minSpd && v <= maxSpd; });
+  return valid.length > 0 ? valid : [String(Math.min(minSpd, maxSpd))];
 };
 
 // ─── CATÁLOGOS DE ACABADOS ────────────────────────────────────────
