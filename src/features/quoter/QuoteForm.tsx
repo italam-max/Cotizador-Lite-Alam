@@ -365,7 +365,7 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
   const sc = (f: string) => hasError(f) ? INPUT_ERR + ' cursor-pointer' : (hasDimWarn(f) || hasWarn(f)) ? INPUT_WARN + ' cursor-pointer appearance-none' : SELECT;
 
   const allowedModels = getAllowedModels(form.capacity, form.stops, form.travel || (form.stops - 1) * 3000);
-  const allowedSpeeds = getAllowedSpeeds(form.model, form.capacity, form.stops);
+  const allowedSpeeds = getAllowedSpeeds(form.model, form.capacity, form.stops, form.travel || (form.stops - 1) * 3000);
   const doorTypeOptions = getDoorTypeOptions(form.model, form.door_side || 'N/A');
   const isMRL  = form.model.includes('MRL');
   const isHyd  = form.model === 'HYD' || form.model === 'Home Lift';

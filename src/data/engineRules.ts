@@ -74,13 +74,40 @@ export const getShaftRule = (capacity: number, model?: ModelId) => {
   return SHAFT_RULES.find(r => capacity >= r.minKg && capacity <= r.maxKg);
 };
 
-/** Velocidad mínima recomendada por EN 81 según número de paradas */
+/** @deprecated — reemplazado por minSpeedForTravel */
 export const minSpeedForStops = (stops: number): number => {
   if (stops > 30) return 2.5;
   if (stops > 20) return 2.0;
   if (stops > 15) return 1.75;
   if (stops > 10) return 1.6;
   if (stops > 6)  return 1.0;
+  return 0.6;
+};
+
+/**
+ * Velocidad mínima recomendada por TRAYECTO — estándar industria (EN 81-20 + práctica MX)
+ * A mayor recorrido, mayor velocidad mínima para mantener tiempos de viaje razonables.
+ */
+export const minSpeedForTravel = (travelMm: number): number => {
+  if (travelMm > 75_000) return 2.5;  // > 75 m
+  if (travelMm > 60_000) return 2.0;  // > 60 m
+  if (travelMm > 45_000) return 1.75; // > 45 m
+  if (travelMm > 30_000) return 1.6;  // > 30 m
+  if (travelMm > 18_000) return 1.0;  // > 18 m
+  return 0.6;                          // ≤ 18 m
+};
+
+/**
+ * Velocidad ideal a sugerir automáticamente según trayecto.
+ * Basado en estándar industria: v (m/s) ≈ recorrido / 20.
+ */
+export const recommendedSpeedForTravel = (travelMm: number): number => {
+  if (travelMm > 75_000) return 3.0;
+  if (travelMm > 60_000) return 2.5;
+  if (travelMm > 45_000) return 2.0;
+  if (travelMm > 30_000) return 1.75;
+  if (travelMm > 18_000) return 1.6;
+  if (travelMm > 12_000) return 1.0;
   return 0.6;
 };
 
@@ -140,15 +167,18 @@ export const computeDefaults = (current: Partial<Omit<Quote, 'id'|'created'|'upd
   if ((model === 'MRL-G'||model==='MRL-L') && stops > 8) { model = 'MR'; out.model = model; }
   if ((model === 'HYD'||model==='Home Lift') && (travel > 12000 || stops > 3)) { model = 'MRL-G'; out.model = model; }
 
-  // 4. Velocidad
+  // 4. Velocidad — gobernada por TRAYECTO (estándar industria EN 81-20)
   const shaftRule = getShaftRule(capacity, model);
   const isHyd = model === 'HYD' || model === 'Home Lift';
-  const maxSpeed = isHyd ? 0.6 : (shaftRule?.maxSpeed ?? 1.0);
-  const minSpeed = isHyd ? 0.6 : minSpeedForStops(stops);
+  const maxSpeed  = isHyd ? 0.6 : (shaftRule?.maxSpeed ?? 4.0);
+  const minSpeed  = isHyd ? 0.6 : minSpeedForTravel(travel);
+  const recSpeed  = isHyd ? 0.6 : recommendedSpeedForTravel(travel);
   const currSpeed = parseFloat(String(current.speed ?? '0'));
   if (!current.speed || currSpeed < minSpeed || currSpeed > maxSpeed) {
-    const best = SPEEDS.map(parseFloat).filter(v => v >= minSpeed && v <= maxSpeed).sort((a, b) => a - b)[0];
-    out.speed = String(best ?? maxSpeed);
+    // Seleccionar la velocidad disponible más cercana a la recomendada para el trayecto
+    const candidates = SPEEDS.map(parseFloat).filter(v => v >= minSpeed && v <= maxSpeed);
+    const best = candidates.sort((a, b) => Math.abs(a - recSpeed) - Math.abs(b - recSpeed))[0];
+    out.speed = String(best ?? minSpeed);
   }
 
   // 5. Fosa y huida
@@ -231,12 +261,15 @@ export const validate = (q: Partial<Quote>): ValidationResult => {
     if (speed > 0.63)    err('speed',  `Hidráulico: máx. 0.6 m/s. Actual: ${speed} m/s`);
   }
 
-  // Velocidad
-  const minSpd = isHyd ? 0.6 : minSpeedForStops(stops);
+  // Velocidad — mínimo por trayecto, máximo por equipo
+  const minSpd = isHyd ? 0.6 : minSpeedForTravel(travel);
+  const recSpd = isHyd ? 0.6 : recommendedSpeedForTravel(travel);
   const shRule = getShaftRule(capacity, model as ModelId);
-  const maxSpd = isHyd ? 0.6 : (shRule?.maxSpeed ?? 1.0);
-  if (speed < minSpd) err('speed', `Mín. ${minSpd} m/s para ${stops} paradas. Actual: ${speed} m/s`);
-  if (speed > maxSpd) err('speed', `Máx. ${maxSpd} m/s para ${capacity} kg. Actual: ${speed} m/s`);
+  const maxSpd = isHyd ? 0.6 : (shRule?.maxSpeed ?? 4.0);
+  if (speed < minSpd)
+    warn('speed', `Velocidad baja para ${(travel/1000).toFixed(0)} m de recorrido. Recomendado: ≥ ${recSpd} m/s`);
+  if (speed > maxSpd)
+    err('speed', `Máx. ${maxSpd} m/s para esta configuración. Actual: ${speed} m/s`);
 
   // Cubo
   if (shRule && !isHyd) {
@@ -272,13 +305,17 @@ export const getAllowedModels = (capacity: number, stops: number, travel: number
     return true;
   });
 
-export const getAllowedSpeeds = (model: ModelId, capacity: number, stops: number): string[] => {
+/**
+ * Velocidades disponibles para el selector del formulario.
+ * Mínimo gobernado por trayecto, máximo por capacidad del equipo.
+ */
+export const getAllowedSpeeds = (model: ModelId, capacity: number, _stops: number, travelMm = 15_000): string[] => {
   const isHyd = model === 'HYD' || model === 'Home Lift';
   const shRule = getShaftRule(capacity, model);
-  const maxSpd = isHyd ? 0.6 : (shRule?.maxSpeed ?? 2.5);
-  const minSpd = isHyd ? 0.6 : minSpeedForStops(stops);
-  const valid = SPEEDS.filter(s => { const v = parseFloat(s); return v >= minSpd && v <= maxSpd; });
-  return valid.length > 0 ? valid : [String(maxSpd)];
+  const maxSpd = isHyd ? 0.6 : (shRule?.maxSpeed ?? 4.0);
+  const minSpd = isHyd ? 0.6 : minSpeedForTravel(travelMm);
+  const valid  = SPEEDS.filter(s => { const v = parseFloat(s); return v >= minSpd && v <= maxSpd; });
+  return valid.length > 0 ? valid : [String(Math.min(minSpd, maxSpd))];
 };
 
 // ─── CATÁLOGOS DE ACABADOS ────────────────────────────────────────
