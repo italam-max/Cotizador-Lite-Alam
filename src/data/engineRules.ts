@@ -325,10 +325,15 @@ export const getAllowedModels = (capacity: number, stops: number, travel: number
  * Velocidades disponibles para el selector del formulario.
  * Mínimo gobernado por trayecto · techo físico por modelo (no por capacidad).
  */
+/**
+ * Velocidades disponibles para el selector del formulario.
+ * Piso = velocidad RECOMENDADA para el trayecto (evita selección manual de velocidades inadecuadas).
+ * Techo = límite físico del modelo.
+ */
 export const getAllowedSpeeds = (model: ModelId, _capacity: number, _stops: number, travelMm = 15_000): string[] => {
   const isHyd  = model === 'HYD' || model === 'Home Lift';
   const maxSpd = isHyd ? 0.6 : getModelMaxSpeed(model);
-  const minSpd = isHyd ? 0.6 : minSpeedForTravel(travelMm);
+  const minSpd = isHyd ? 0.6 : recommendedSpeedForTravel(travelMm);
   const valid  = SPEEDS.filter(s => { const v = parseFloat(s); return v >= minSpd && v <= maxSpd; });
   return valid.length > 0 ? valid : [String(Math.min(minSpd, maxSpd))];
 };
