@@ -17,7 +17,7 @@ export const SPEEDS = ['0.6', '1.0', '1.6', '1.75', '2.0', '2.5', '3.0', '4.0'];
 
 export const MODELS: { id: ModelId; label: string; desc: string }[] = [
   { id: 'MRL-L', label: 'MRL-L',     desc: 'Sin cuarto de máquinas — Chasis L (hasta 450 kg, 8 paradas)' },
-  { id: 'MRL-G', label: 'MRL-G',     desc: 'Sin cuarto de máquinas — Chasis G (hasta 2000 kg, 8 paradas)' },
+  { id: 'MRL-G', label: 'MRL-G',     desc: 'Sin cuarto de máquinas — Chasis G (hasta 2000 kg, 40 paradas)' },
   { id: 'MR',    label: 'MR',        desc: 'Con cuarto de máquinas (alta carga, muchos niveles)' },
   { id: 'HYD',   label: 'Hidráulico',desc: 'Hidráulico (máx. 12m recorrido, 3 paradas, 0.6 m/s)' },
   { id: 'Home Lift', label: 'Home Lift', desc: 'Residencial (homelift hidráulico o gearless)' },
@@ -128,7 +128,7 @@ export const suggestModel = (capacity: number, stops: number, travel: number): M
   const HYD_MAX_TRAVEL = 12000;
   const HYD_MAX_STOPS  = 3;
   if (travel <= HYD_MAX_TRAVEL && stops <= HYD_MAX_STOPS && capacity <= 1000) return 'HYD';
-  if (stops > 8 || capacity > 2000) return 'MR';
+  if (stops > 40 || capacity > 2000) return 'MR';
   if (capacity <= 450) return 'MRL-L';
   return 'MRL-G';
 };
@@ -176,7 +176,7 @@ export const computeDefaults = (current: Partial<Omit<Quote, 'id'|'created'|'upd
   if (model === 'MRL-L' && capacity > 450)   { model = 'MRL-G'; out.model = model; }
   if (model === 'MRL-L' && stops > 8)         { model = 'MR';    out.model = model; }
   if ((model === 'MRL-G'||model==='MRL-L') && capacity > 2000) { model = 'MR'; out.model = model; }
-  if ((model === 'MRL-G'||model==='MRL-L') && stops > 8) { model = 'MR'; out.model = model; }
+  if (model === 'MRL-G' && stops > 40) { model = 'MR'; out.model = model; }
   if ((model === 'HYD'||model==='Home Lift') && (travel > 12000 || stops > 3)) { model = 'MRL-G'; out.model = model; }
 
   // 4. Velocidad — gobernada por TRAYECTO · techo por modelo (no por capacidad)
@@ -265,7 +265,7 @@ export const validate = (q: Partial<Quote>): ValidationResult => {
   }
   if (model === 'MRL-G') {
     if (capacity > 2000) err('capacity', `MRL-G: máx. 2000 kg. Actual: ${capacity} kg`);
-    if (stops > 8)       err('stops',    `MRL-G: máx. 8 paradas recomendado. Actual: ${stops}`);
+    if (stops > 40)      err('stops',    `MRL-G: máx. 40 paradas. Actual: ${stops}`);
   }
   if (isHyd) {
     if (travel > 12000)  err('travel', `Hidráulico: máx. 12 m. Actual: ${(travel/1000).toFixed(1)} m`);
@@ -300,9 +300,9 @@ export const validate = (q: Partial<Quote>): ValidationResult => {
       warn('overhead', `Huida recomendada: ${dims.overhead} mm para ${speed} m/s`);
   }
 
-  // MRL-G en >10 niveles
-  if (model === 'MRL-G' && stops > 10)
-    warn('stops', `Para ${stops} niveles, MR ofrece mayor confort sísmico`);
+  // MRL-G en >30 niveles — aviso informativo (no bloquea)
+  if (model === 'MRL-G' && stops > 30)
+    warn('stops', `Para ${stops} niveles considera MR para mayor confort sísmico`);
 
   return { errors, warnings, isValid: errors.length === 0 };
 };
@@ -313,7 +313,7 @@ export const getAllowedModels = (capacity: number, stops: number, travel: number
     const id = m.id;
     if ((id === 'HYD'||id==='Home Lift') && (travel > 12000 || stops > 3)) return false;
     if (id === 'MRL-L' && (capacity > 450  || stops > 8)) return false;
-    if (id === 'MRL-G' && (capacity > 2000 || stops > 8)) return false;
+    if (id === 'MRL-G' && (capacity > 2000 || stops > 40)) return false;
     return true;
   });
 
