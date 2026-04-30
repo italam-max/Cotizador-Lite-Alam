@@ -121,11 +121,17 @@ export async function sendQuoteToOdoo(
   const isMR = quote.model === 'MR';
   const extrasArr: string[] = (() => { try { return JSON.parse(quote.cabin_model || '[]'); } catch { return []; } })();
   const EXTRA_LABELS: Record<string, string> = {
-    'espejo-trasero': 'Espejo fondo', 'espejo-lateral': 'Espejo lateral',
-    'pasamanos-inox': 'Pasamanos INOX', 'pasamanos-crom': 'Pasamanos cromado',
-    'led-premium': 'LED Premium', 'panoramico': 'Panel panorámico',
+    'espejo-trasero':    'Espejo fondo',
+    'pasamanos-lg-h11': 'LG-H11 Acrílico',
+    'pasamanos-lg-h13': 'LG-H13 Olmo Oro Rosa',
+    'pasamanos-lg-h15': 'LG-H15 Jade Oro Rosa',
+    'pasamanos-lg-h17': 'LG-H17 Doble Tubo',
   };
-  const extrasStr = extrasArr.map(e => EXTRA_LABELS[e] || e).join(', ') || '—';
+  const panPos = ['izquierdo','derecho','fondo'].filter(p => extrasArr.includes(`panoramico-${p}`));
+  const panLabel = panPos.length === 3 ? 'Cabina panorámica completa'
+    : panPos.length > 0 ? `Panel panorámico (${panPos.join(', ')})` : null;
+  const otherExtras = extrasArr.filter(e => !e.startsWith('panoramico-')).map(e => EXTRA_LABELS[e] || e);
+  const extrasStr = [...(panLabel ? [panLabel] : []), ...otherExtras].join(', ') || '—';
 
   const description = [
     '━━ DATOS GENERALES ━━',

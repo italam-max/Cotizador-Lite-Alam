@@ -229,3 +229,9 @@ body {
 .status-ganada      { background: rgba(16,185,129,0.1);   color: #065f46; border: 1px solid rgba(16,185,129,0.25); }
 .status-perdida     { background: rgba(239,68,68,0.1);    color: #991b1b; border: 1px solid rgba(239,68,68,0.25);  }
 .status-cancelada   { background: rgba(107,114,128,0.1);  color: #374151; border: 1px solid rgba(107,114,128,0.25);}
+
+
+/* ── Transición suave (UI general) ── */
+*, *::before, *::after {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease;
+}

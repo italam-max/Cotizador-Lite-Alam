@@ -1,43 +1,26 @@
 // ARCHIVO: src/components/ui/PDFOptionsSection.tsx
-// Accesorios opcionales del elevador — se configura en Paso 2 (Técnico)
-// Controla qué aparece en la propuesta PDF del cliente
+// Accesorios opcionales — obligatorio elegir una opción antes de guardar.
+// Arranca en estado neutro (ninguna opción marcada) para forzar la revisión.
 
-import { TODAS_SEGURIDADES, TODOS_EXTRAS_DESC } from '../../features/pdf/QuotePDF';
+import { AlertTriangle, ShieldCheck, ShieldOff } from 'lucide-react';
+import { TODAS_SEGURIDADES } from '../../features/pdf/QuotePDF';
 
 export interface PdfOptions {
-  seguridades:        string[];   // cuáles seguridades aparecen en Pág. 4
-  extras_descripcion: string[];   // cuáles extras aparecen en la descripción (Pág. 2)
-  mostrar_normativa:  boolean;    // bloque normativa (Pág. 4 — junto a Puertas)
-  mostrar_calidad:    boolean;    // bloque calidad   (Pág. 4 — junto a Cabina)
-  mostrar_ventajas:   boolean;    // bloque ventajas  (Pág. 4 — junto a Seguridades)
+  seguridades:     string[];
+  control_id?:     string;
+  sin_accesorios?: boolean;   // true = sin accesorios | false/undefined = no elegido aún o con accesorios
 }
 
+// Estado inicial: neutro — ninguna opción pre-seleccionada
 export const DEFAULT_PDF_OPTIONS: PdfOptions = {
-  seguridades:        [...TODAS_SEGURIDADES],
-  extras_descripcion: [...TODOS_EXTRAS_DESC],
-  mostrar_normativa:  true,
-  mostrar_calidad:    true,
-  mostrar_ventajas:   true,
+  seguridades:    [],
+  control_id:     '',
+  sin_accesorios: undefined,
 };
 
 interface Props {
   value:    PdfOptions;
   onChange: (opts: PdfOptions) => void;
-}
-
-// ── Toggle switch ────────────────────────────────────────────
-function Toggle({ active, onChange }: { active: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      type="button"
-      onClick={() => onChange(!active)}
-      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 ease-in-out ${
-        active ? 'border-[#0A2463] bg-[#0A2463]' : 'border-gray-300 bg-gray-200'
-      }`}
-    >
-      <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ${active ? 'translate-x-4' : 'translate-x-0'}`} />
-    </button>
-  );
 }
 
 // ── Checkbox item ────────────────────────────────────────────
@@ -63,113 +46,102 @@ function CheckItem({ label, active, onChange }: { label: string; active: boolean
 export default function PDFOptionsSection({ value, onChange }: Props) {
   const set = (partial: Partial<PdfOptions>) => onChange({ ...value, ...partial });
 
+  const sinActivo = value.sin_accesorios === true;
+  const conActivo = value.sin_accesorios !== true && value.seguridades.length > 0;
+  // Pendiente: ninguna opción elegida
+  const pendiente = !sinActivo && !conActivo;
+
+  const allSeg = value.seguridades.length === TODAS_SEGURIDADES.length;
+
   const toggleSeguridad = (s: string, checked: boolean) => {
     const next = checked
       ? [...value.seguridades, s]
       : value.seguridades.filter(x => x !== s);
-    // mantener el orden del catálogo
-    set({ seguridades: TODAS_SEGURIDADES.filter(x => next.includes(x)) });
+    set({ seguridades: TODAS_SEGURIDADES.filter(x => next.includes(x)), sin_accesorios: false });
   };
-
-  const toggleExtra = (e: string, checked: boolean) => {
-    const next = checked
-      ? [...value.extras_descripcion, e]
-      : value.extras_descripcion.filter(x => x !== e);
-    set({ extras_descripcion: TODOS_EXTRAS_DESC.filter(x => next.includes(x)) });
-  };
-
-  const allSeg   = value.seguridades.length === TODAS_SEGURIDADES.length;
-  const allExtra = value.extras_descripcion.length === TODOS_EXTRAS_DESC.length;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
 
-      {/* ── 1. Extras en descripción ─────────────────────── */}
-      {/* Estos aparecen en la línea de descripción de la Pág. 2 del PDF */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <p className="text-[10px] font-black text-[#0A2463]/60 uppercase tracking-wider">
-              Extras en descripción de cotización
-            </p>
-            <p className="text-[9px] text-[#0A2463]/35 mt-0.5">
-              Aparecen en la descripción del equipo — Pág. 2
-            </p>
+      {/* ── Banner de alerta cuando está pendiente ── */}
+      {pendiente && (
+        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-amber-50 border-2 border-amber-300">
+          <AlertTriangle size={15} className="text-amber-500 shrink-0" />
+          <p className="text-[12px] font-bold text-amber-700">
+            Debes seleccionar una opción antes de guardar
+          </p>
+        </div>
+      )}
+
+      {/* ── Botones de elección ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+
+        {/* CON accesorios */}
+        <button
+          type="button"
+          onClick={() => set({ sin_accesorios: false, seguridades: allSeg || conActivo ? value.seguridades : [...TODAS_SEGURIDADES] })}
+          className="flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 text-left transition-all"
+          style={{
+            borderColor: conActivo ? '#0A2463' : '#e2e8f0',
+            background:  conActivo ? '#0A2463' : 'white',
+            color:       conActivo ? 'white'   : '#0A2463',
+          }}>
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: conActivo ? 'rgba(212,175,55,0.20)' : '#f1f5f9' }}>
+            <ShieldCheck size={16} style={{ color: conActivo ? '#D4AF37' : '#64748b' }} />
           </div>
-          <button
-            type="button"
-            onClick={() => set({ extras_descripcion: allExtra ? [] : [...TODOS_EXTRAS_DESC] })}
-            className="text-[9px] font-bold text-[#0A2463]/50 hover:text-[#0A2463] underline transition-colors"
-          >
-            {allExtra ? 'Quitar todos' : 'Todos'}
-          </button>
-        </div>
-        <div className="grid grid-cols-2 gap-1.5">
-          {TODOS_EXTRAS_DESC.map(extra => (
-            <CheckItem
-              key={extra}
-              label={extra}
-              active={value.extras_descripcion.includes(extra)}
-              onChange={checked => toggleExtra(extra, checked)}
-            />
-          ))}
-        </div>
-      </div>
+          <p className="text-sm font-bold" style={{ fontFamily: "'Syne', sans-serif" }}>
+            Con accesorios opcionales
+          </p>
+        </button>
 
-      {/* ── 2. Seguridades incluidas ─────────────────────── */}
-      {/* Aparecen como lista de bullets en la Pág. 4 del PDF */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <p className="text-[10px] font-black text-[#0A2463]/60 uppercase tracking-wider">
-              Seguridades incluidas
-            </p>
-            <p className="text-[9px] text-[#0A2463]/35 mt-0.5">
-              Lista de seguridades que aparece en la propuesta — Pág. 4
-            </p>
+        {/* SIN accesorios */}
+        <button
+          type="button"
+          onClick={() => set({ sin_accesorios: true, seguridades: [] })}
+          className="flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 text-left transition-all"
+          style={{
+            borderColor: sinActivo ? '#0A2463' : '#e2e8f0',
+            background:  sinActivo ? '#0A2463' : 'white',
+            color:       sinActivo ? 'white'   : '#0A2463',
+          }}>
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: sinActivo ? 'rgba(212,175,55,0.20)' : '#f1f5f9' }}>
+            <ShieldOff size={16} style={{ color: sinActivo ? '#D4AF37' : '#64748b' }} />
           </div>
-          <button
-            type="button"
-            onClick={() => set({ seguridades: allSeg ? [] : [...TODAS_SEGURIDADES] })}
-            className="text-[9px] font-bold text-[#0A2463]/50 hover:text-[#0A2463] underline transition-colors"
-          >
-            {allSeg ? 'Quitar todas' : 'Todas'}
-          </button>
-        </div>
-        <div className="grid grid-cols-1 gap-1.5">
-          {TODAS_SEGURIDADES.map(seg => (
-            <CheckItem
-              key={seg}
-              label={seg}
-              active={value.seguridades.includes(seg)}
-              onChange={checked => toggleSeguridad(seg, checked)}
-            />
-          ))}
-        </div>
+          <p className="text-sm font-bold" style={{ fontFamily: "'Syne', sans-serif" }}>
+            Sin accesorios opcionales
+          </p>
+        </button>
       </div>
 
-      {/* ── 3. Opciones de presentación ──────────────────── */}
-      {/* Bloques de texto opcionales que aparecen en Pág. 4 */}
-      <div>
-        <p className="text-[10px] font-black text-[#0A2463]/60 uppercase tracking-wider mb-1">
-          Bloques de texto en propuesta
-        </p>
-        <p className="text-[9px] text-[#0A2463]/35 mb-3">
-          Información adicional que puede incluirse u omitirse — Pág. 4
-        </p>
-        <div className="space-y-2">
-          {[
-            { key: 'mostrar_normativa' as const, label: 'Incluir bloque de normativa en propuesta' },
-            { key: 'mostrar_calidad'   as const, label: 'Calidad y estándares' },
-            { key: 'mostrar_ventajas'  as const, label: 'Ventajas del sistema ALAMEX' },
-          ].map(({ key, label }) => (
-            <div key={key} className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-white border border-gray-100">
-              <p className="text-[11px] font-semibold text-[#0A2463]">{label}</p>
-              <Toggle active={value[key]} onChange={v => set({ [key]: v })} />
-            </div>
-          ))}
+      {/* ── Lista de seguridades (solo cuando CON accesorios está activo) ── */}
+      {conActivo && (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[10px] font-black text-[#0A2463]/60 uppercase tracking-wider">
+              Seguridades adicionales
+            </p>
+            <button
+              type="button"
+              onClick={() => set({ seguridades: allSeg ? [] : [...TODAS_SEGURIDADES], sin_accesorios: false })}
+              className="text-[9px] font-bold text-[#0A2463]/50 hover:text-[#0A2463] underline transition-colors"
+            >
+              {allSeg ? 'Quitar todas' : 'Seleccionar todas'}
+            </button>
+          </div>
+          <div className="grid grid-cols-1 gap-1.5">
+            {TODAS_SEGURIDADES.map(seg => (
+              <CheckItem
+                key={seg}
+                label={seg}
+                active={value.seguridades.includes(seg)}
+                onChange={checked => toggleSeguridad(seg, checked)}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
     </div>
   );

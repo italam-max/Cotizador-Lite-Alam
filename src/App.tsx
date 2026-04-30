@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useAuth }        from './hooks/useAuth';
 import { useToast }       from './hooks/useToast';
+import { ThemeProvider }  from './contexts/ThemeContext';
 import LoginPage          from './components/auth/LoginPage';
 import AppShell           from './components/layout/AppShell';
 import ToastContainer     from './components/ui/ToastContainer';
@@ -54,6 +55,7 @@ export default function App() {
   const displayTitle = profile?.job_title ?? 'Ejecutivo';
 
   return (
+    <ThemeProvider>
     <>
       <AppShell
         displayName={displayName}
@@ -106,5 +108,6 @@ export default function App() {
 
       <ToastContainer toasts={toasts} dismiss={dismiss} />
     </>
+    </ThemeProvider>
   );
 }

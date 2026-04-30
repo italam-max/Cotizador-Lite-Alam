@@ -341,53 +341,51 @@ export default function CabinConfigurator({
       ctx.restore();
     }
 
-    // Espejo lateral
-    if (extras.includes('espejo-lateral')) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(LL.x + 6, LL.y + 18); ctx.lineTo(FL.x - 2, FL.y + 18);
-      ctx.lineTo(FBL.x - 2, FBL.y - 18); ctx.lineTo(LLB.x + 6, LLB.y - 28);
-      ctx.closePath(); ctx.clip();
-      const lg = ctx.createLinearGradient(LL.x, 0, FL.x, 0);
-      lg.addColorStop(0,   'rgba(255,255,255,0.03)');
-      lg.addColorStop(0.5, 'rgba(220,232,255,0.18)');
-      lg.addColorStop(1,   'rgba(255,255,255,0.06)');
-      ctx.fillStyle = lg; ctx.fill();
-      ctx.strokeStyle = 'rgba(200,210,225,0.50)'; ctx.lineWidth = 1.5; ctx.stroke();
-      ctx.restore();
-    }
-
     // Pasamanos
-    if (extras.includes('pasamanos-inox') || extras.includes('pasamanos-crom')) {
-      const isCrom = extras.includes('pasamanos-crom');
+    const pasId = extras.find(e => e.startsWith('pasamanos-'));
+    if (pasId) {
+      const isH11 = pasId === 'pasamanos-lg-h11';
+      const isH13 = pasId === 'pasamanos-lg-h13';
+      const isH15 = pasId === 'pasamanos-lg-h15';
+      const isH17 = pasId === 'pasamanos-lg-h17';
       const py = FL.y + (FBL.y - FL.y) * 0.46;
       ctx.save();
       ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 4;
       const rg = ctx.createLinearGradient(0, py - 6, 0, py + 7);
-      if (isCrom) {
-        rg.addColorStop(0,    '#f4f4f6');
-        rg.addColorStop(0.35, '#bcbcc0');
-        rg.addColorStop(0.65, '#e6e6ea');
-        rg.addColorStop(1,    '#9c9ca0');
+      if (isH13) {
+        rg.addColorStop(0, '#d4b896'); rg.addColorStop(0.35, '#9b7553');
+        rg.addColorStop(0.65, '#c8a882'); rg.addColorStop(1, '#7a5c40');
+      } else if (isH15) {
+        rg.addColorStop(0, '#f5f0e8'); rg.addColorStop(0.35, '#d0c8b8');
+        rg.addColorStop(0.65, '#ede8e0'); rg.addColorStop(1, '#b8b0a0');
       } else {
-        rg.addColorStop(0,    '#eceef2');
-        rg.addColorStop(0.35, '#aab0bc');
-        rg.addColorStop(0.65, '#dadfe8');
-        rg.addColorStop(1,    '#888e9c');
+        rg.addColorStop(0, '#eceef2'); rg.addColorStop(0.35, '#aab0bc');
+        rg.addColorStop(0.65, '#dadfe8'); rg.addColorStop(1, '#888e9c');
       }
-      ctx.strokeStyle = rg; ctx.lineWidth = 11; ctx.lineCap = 'round';
+      ctx.strokeStyle = rg;
+      ctx.lineWidth = isH11 ? 8 : 11;
+      ctx.lineCap = isH11 ? 'square' : 'round';
       ctx.beginPath(); ctx.moveTo(FL.x + 12, py); ctx.lineTo(FR.x - 12, py); ctx.stroke();
+      // Segundo tubo para H17
+      if (isH17) {
+        ctx.shadowBlur = 4;
+        const rg2 = ctx.createLinearGradient(0, py + 8, 0, py + 17);
+        rg2.addColorStop(0, '#eceef2'); rg2.addColorStop(0.5, '#aab0bc'); rg2.addColorStop(1, '#888e9c');
+        ctx.strokeStyle = rg2; ctx.lineWidth = 7; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(FL.x + 12, py + 14); ctx.lineTo(FR.x - 12, py + 14); ctx.stroke();
+      }
       ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
       // Highlight superior
-      ctx.strokeStyle = 'rgba(255,255,255,0.58)'; ctx.lineWidth = 2.5;
+      ctx.strokeStyle = 'rgba(255,255,255,0.58)'; ctx.lineWidth = isH11 ? 1.5 : 2.5; ctx.lineCap = 'round';
       ctx.beginPath(); ctx.moveTo(FL.x + 14, py - 3); ctx.lineTo(FR.x - 14, py - 3); ctx.stroke();
       // Soportes
+      const supportColor = (isH13 || isH15) ? '#c8906e' : '#a2a8b6';
+      const pyEnd = isH17 ? py + 22 : py + 5.5;
       [0.18, 0.50, 0.82].forEach(t => {
         const sx = FL.x + (FR.x - FL.x) * t;
         ctx.shadowBlur = 3;
-        ctx.strokeStyle = isCrom ? '#b0b0b6' : '#a2a8b6';
-        ctx.lineWidth = 5; ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.moveTo(sx, py + 5.5); ctx.lineTo(sx, py + 26); ctx.stroke();
+        ctx.strokeStyle = supportColor; ctx.lineWidth = 5; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(sx, pyEnd); ctx.lineTo(sx, pyEnd + 20); ctx.stroke();
       });
       ctx.restore();
     }
@@ -468,43 +466,41 @@ export default function CabinConfigurator({
       ctx.restore();
     }
 
-    // ── 11. LUZ LED premium ───────────────────────────────────────────────────
-    if (extras.includes('led-premium')) {
-      const ambG = ctx.createRadialGradient(W / 2, FL.y + 5, 0, W / 2, FL.y + 5, W * 0.65);
-      ambG.addColorStop(0,   'rgba(255,252,220,0.18)');
-      ambG.addColorStop(0.5, 'rgba(255,250,200,0.05)');
-      ambG.addColorStop(1,   'rgba(0,0,0,0)');
-      ctx.fillStyle = ambG; ctx.fillRect(0, 0, W, H);
-      [0.20, 0.50, 0.80].forEach(t => {
-        const sx = FL.x + (FR.x - FL.x) * t, sy = FL.y + 6;
-        const halo = ctx.createRadialGradient(sx, sy, 0, sx, sy, 70);
-        halo.addColorStop(0,   'rgba(255,252,230,0.24)');
-        halo.addColorStop(0.5, 'rgba(255,250,200,0.07)');
-        halo.addColorStop(1,   'rgba(0,0,0,0)');
-        ctx.fillStyle = halo; ctx.fillRect(sx - 72, sy - 5, 144, 100);
-        ctx.shadowColor = 'rgba(255,252,220,0.85)'; ctx.shadowBlur = 10;
-        ctx.fillStyle = '#fffff8';
-        ctx.beginPath(); ctx.arc(sx, sy, 4, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath(); ctx.arc(sx, sy, 2, 0, Math.PI * 2); ctx.fill();
-        ctx.shadowBlur = 0;
-      });
-    }
-
-    // ── 12. VENTANA PANORÁMICA ────────────────────────────────────────────────
-    if (extras.includes('panoramico')) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(RL.x - 7, RL.y + 14); ctx.lineTo(FR.x + 3, FR.y + 20);
-      ctx.lineTo(FBR.x + 3, FBR.y - 20); ctx.lineTo(RLB.x - 7, RLB.y - 24);
-      ctx.closePath(); ctx.clip();
-      const pg = ctx.createLinearGradient(FR.x, 0, RL.x, 0);
-      pg.addColorStop(0, 'rgba(140,195,255,0.10)');
-      pg.addColorStop(1, 'rgba(175,218,255,0.26)');
-      ctx.fillStyle = pg; ctx.fill();
-      ctx.strokeStyle = 'rgba(140,195,255,0.38)'; ctx.lineWidth = 1.8;
-      ctx.setLineDash([5, 4]); ctx.stroke();
-      ctx.restore();
+    // ── 11. VENTANA PANORÁMICA ────────────────────────────────────────────────
+    const hasPan = extras.some(e => e.startsWith('panoramico-'));
+    if (hasPan) {
+      const drawPanGlass = (p1: {x:number,y:number}, p2: {x:number,y:number}, p3: {x:number,y:number}, p4: {x:number,y:number}) => {
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+        ctx.lineTo(p3.x, p3.y); ctx.lineTo(p4.x, p4.y);
+        ctx.closePath(); ctx.clip();
+        const pg = ctx.createLinearGradient(p1.x, 0, p2.x, 0);
+        pg.addColorStop(0, 'rgba(140,195,255,0.10)');
+        pg.addColorStop(1, 'rgba(175,218,255,0.26)');
+        ctx.fillStyle = pg; ctx.fill();
+        ctx.strokeStyle = 'rgba(140,195,255,0.38)'; ctx.lineWidth = 1.8;
+        ctx.setLineDash([5, 4]); ctx.stroke();
+        ctx.restore();
+      };
+      if (extras.includes('panoramico-derecho'))
+        drawPanGlass({ x: RL.x - 7, y: RL.y + 14 }, { x: FR.x + 3, y: FR.y + 20 }, { x: FBR.x + 3, y: FBR.y - 20 }, { x: RLB.x - 7, y: RLB.y - 24 });
+      if (extras.includes('panoramico-izquierdo'))
+        drawPanGlass({ x: LL.x + 6, y: LL.y + 18 }, { x: FL.x - 2, y: FL.y + 18 }, { x: FBL.x - 2, y: FBL.y - 18 }, { x: LLB.x + 6, y: LLB.y - 28 });
+      if (extras.includes('panoramico-fondo')) {
+        ctx.save();
+        const pg = ctx.createLinearGradient(LLB.x, 0, RLB.x, 0);
+        pg.addColorStop(0, 'rgba(140,195,255,0.08)');
+        pg.addColorStop(1, 'rgba(175,218,255,0.22)');
+        ctx.fillStyle = pg;
+        ctx.beginPath();
+        ctx.moveTo(LL.x, LL.y + 18); ctx.lineTo(RL.x, RL.y + 18);
+        ctx.lineTo(RLB.x, RLB.y - 18); ctx.lineTo(LLB.x, LLB.y - 18);
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(140,195,255,0.38)'; ctx.lineWidth = 1.5;
+        ctx.setLineDash([5, 4]); ctx.stroke();
+        ctx.restore();
+      }
     }
 
     // ── 13. VIGNETTE GLOBAL ───────────────────────────────────────────────────
@@ -531,11 +527,16 @@ export default function CabinConfigurator({
       ctx.fillText(desc, 14, H - fh + 30);
       // Extras
       const extraLabels: Record<string, string> = {
-        'espejo-trasero': 'Espejo Fondo','espejo-lateral': 'Esp. Lateral',
-        'pasamanos-inox': 'Pasam. Inox','pasamanos-crom': 'Pasam. Crom',
-        'led-premium': 'LED Premium','panoramico': 'Panorámico',
+        'espejo-trasero':    'Espejo Fondo',
+        'pasamanos-lg-h11':  'LG-H11',
+        'pasamanos-lg-h13':  'LG-H13',
+        'pasamanos-lg-h15':  'LG-H15',
+        'pasamanos-lg-h17':  'LG-H17',
       };
-      const el = extras.slice(0, 5).map(e => extraLabels[e] || e).join(' · ');
+      const panPos = ['izquierdo','derecho','fondo'].filter(p => extras.includes(`panoramico-${p}`));
+      const panEl = panPos.length === 3 ? 'Panorámica completa' : panPos.length > 0 ? `Pan. ${panPos.join('/')}` : '';
+      const otherEl = extras.filter(e => !e.startsWith('panoramico-')).map(e => extraLabels[e] || e);
+      const el = [...(panEl ? [panEl] : []), ...otherEl].slice(0, 5).join(' · ');
       if (el) {
         ctx.fillStyle = 'rgba(212,175,55,0.68)'; ctx.font = '7.5px "DM Sans", sans-serif';
         ctx.fillText(el, 14, H - fh + 44);

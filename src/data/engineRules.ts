@@ -16,34 +16,46 @@ export const CAPACITIES = Object.keys(CAPACITY_PERSONS).map(Number);
 export const SPEEDS = ['0.6', '1.0', '1.6', '1.75', '2.0', '2.5', '3.0', '4.0'];
 
 export const MODELS: { id: ModelId; label: string; desc: string }[] = [
-  { id: 'MRL-L', label: 'MRL-L',     desc: 'Sin cuarto de máquinas — Chasis L (hasta 450 kg, 8 paradas)' },
+  { id: 'MRL-L', label: 'MRL-L',     desc: 'Sin cuarto de máquinas — Chasis L (hasta 630 kg, 7 paradas)' },
   { id: 'MRL-G', label: 'MRL-G',     desc: 'Sin cuarto de máquinas — Chasis G (hasta 2000 kg, 40 paradas)' },
   { id: 'MR',    label: 'MR',        desc: 'Con cuarto de máquinas (alta carga, muchos niveles)' },
   { id: 'HYD',   label: 'Hidráulico',desc: 'Hidráulico (máx. 12m recorrido, 3 paradas, 0.6 m/s)' },
   { id: 'Home Lift', label: 'Home Lift', desc: 'Residencial (homelift hidráulico o gearless)' },
 ];
 
-// Reglas de cubo mínimo por capacidad
+// Reglas de cubo mínimo por capacidad — fuente: fichas técnicas Alamex
 export const SHAFT_RULES: { minKg: number; maxKg: number; model: ModelId; minWidth: number; minDepth: number; maxSpeed: number }[] = [
-  { minKg: 0,    maxKg: 450,  model: 'MRL-L', minWidth: 1550, minDepth: 1550, maxSpeed: 1.0  },
-  { minKg: 451,  maxKg: 630,  model: 'MRL-G', minWidth: 1600, minDepth: 1650, maxSpeed: 1.6  },
-  { minKg: 631,  maxKg: 800,  model: 'MRL-G', minWidth: 1750, minDepth: 1750, maxSpeed: 1.75 },
-  { minKg: 801,  maxKg: 1000, model: 'MRL-G', minWidth: 1800, minDepth: 2000, maxSpeed: 2.0  },
-  { minKg: 1001, maxKg: 1250, model: 'MRL-G', minWidth: 1900, minDepth: 2200, maxSpeed: 2.0  },
-  { minKg: 1251, maxKg: 1600, model: 'MRL-G', minWidth: 2000, minDepth: 2300, maxSpeed: 2.5  },
-  { minKg: 1601, maxKg: 2000, model: 'MRL-G', minWidth: 2100, minDepth: 2400, maxSpeed: 2.5  },
-  { minKg: 1001, maxKg: 1275, model: 'MR',    minWidth: 2000, minDepth: 2400, maxSpeed: 2.5  },
-  { minKg: 1276, maxKg: 1600, model: 'MR',    minWidth: 2355, minDepth: 2730, maxSpeed: 2.5  },
-  { minKg: 1601, maxKg: 2000, model: 'MR',    minWidth: 2555, minDepth: 2800, maxSpeed: 2.5  },
-  { minKg: 2001, maxKg: 5000, model: 'MR',    minWidth: 2800, minDepth: 3000, maxSpeed: 2.5  },
+  // ── MRL-L ──────────────────────────────────────────────────────────────────
+  { minKg: 0,    maxKg: 350,  model: 'MRL-L', minWidth: 1600, minDepth: 1550, maxSpeed: 1.0 },
+  { minKg: 351,  maxKg: 450,  model: 'MRL-L', minWidth: 1700, minDepth: 1600, maxSpeed: 1.0 },
+  { minKg: 451,  maxKg: 630,  model: 'MRL-L', minWidth: 1800, minDepth: 1800, maxSpeed: 1.0 },
+  // ── MRL-G ──────────────────────────────────────────────────────────────────
+  { minKg: 0,    maxKg: 350,  model: 'MRL-G', minWidth: 1550, minDepth: 1550, maxSpeed: 2.5 },
+  { minKg: 351,  maxKg: 450,  model: 'MRL-G', minWidth: 1650, minDepth: 1600, maxSpeed: 2.5 },
+  { minKg: 451,  maxKg: 630,  model: 'MRL-G', minWidth: 1800, minDepth: 1800, maxSpeed: 2.5 },
+  { minKg: 631,  maxKg: 800,  model: 'MRL-G', minWidth: 2000, minDepth: 1950, maxSpeed: 2.5 },
+  { minKg: 801,  maxKg: 1000, model: 'MRL-G', minWidth: 2100, minDepth: 2050, maxSpeed: 2.5 },
+  { minKg: 1001, maxKg: 1250, model: 'MRL-G', minWidth: 2450, minDepth: 2250, maxSpeed: 2.5 },
+  { minKg: 1251, maxKg: 1600, model: 'MRL-G', minWidth: 2000, minDepth: 2300, maxSpeed: 2.5 },
+  { minKg: 1601, maxKg: 2000, model: 'MRL-G', minWidth: 2100, minDepth: 2400, maxSpeed: 2.5 },
+  // ── MR ─────────────────────────────────────────────────────────────────────
+  { minKg: 0,    maxKg: 350,  model: 'MR',    minWidth: 1550, minDepth: 1550, maxSpeed: 4.0 },
+  { minKg: 351,  maxKg: 450,  model: 'MR',    minWidth: 1650, minDepth: 1600, maxSpeed: 4.0 },
+  { minKg: 451,  maxKg: 630,  model: 'MR',    minWidth: 1750, minDepth: 1800, maxSpeed: 4.0 },
+  { minKg: 631,  maxKg: 800,  model: 'MR',    minWidth: 1950, minDepth: 1950, maxSpeed: 4.0 },
+  { minKg: 801,  maxKg: 1000, model: 'MR',    minWidth: 2100, minDepth: 2050, maxSpeed: 4.0 },
+  { minKg: 1001, maxKg: 1250, model: 'MR',    minWidth: 2450, minDepth: 2250, maxSpeed: 4.0 },
+  { minKg: 1251, maxKg: 1600, model: 'MR',    minWidth: 2355, minDepth: 2730, maxSpeed: 4.0 },
+  { minKg: 1601, maxKg: 2000, model: 'MR',    minWidth: 2555, minDepth: 2800, maxSpeed: 4.0 },
+  { minKg: 2001, maxKg: 5000, model: 'MR',    minWidth: 2800, minDepth: 3000, maxSpeed: 4.0 },
 ];
 
-// Fosa y huida estándar por velocidad y modelo
+// Fosa y huida estándar por velocidad y modelo — fuente: fichas técnicas Alamex
 const DIM_TABLE: { speed: number; model: ModelId; pit: number; overhead: number }[] = [
   { speed: 0.6,  model: 'HYD',   pit: 1100, overhead: 3400 },
-  { speed: 1.0,  model: 'MRL-G', pit: 1100, overhead: 3900 },
-  { speed: 1.0,  model: 'MRL-L', pit: 1100, overhead: 3600 },
-  { speed: 1.0,  model: 'MR',    pit: 1100, overhead: 3500 },
+  { speed: 1.0,  model: 'MRL-G', pit: 1200, overhead: 3800 },
+  { speed: 1.0,  model: 'MRL-L', pit: 1200, overhead: 3800 },
+  { speed: 1.0,  model: 'MR',    pit: 1200, overhead: 3600 },
   { speed: 1.6,  model: 'MRL-G', pit: 1300, overhead: 3800 },
   { speed: 1.6,  model: 'MR',    pit: 1400, overhead: 4000 },
   { speed: 1.75, model: 'MRL-G', pit: 1400, overhead: 4100 },
@@ -173,8 +185,8 @@ export const computeDefaults = (current: Partial<Omit<Quote, 'id'|'created'|'upd
   // 3. Modelo — correcciones automáticas
   let model = current.model as ModelId | undefined;
   if (!model) { model = suggestModel(capacity, stops, travel); out.model = model; }
-  if (model === 'MRL-L' && capacity > 450)   { model = 'MRL-G'; out.model = model; }
-  if (model === 'MRL-L' && stops > 8)         { model = 'MR';    out.model = model; }
+  if (model === 'MRL-L' && capacity > 630)   { model = 'MRL-G'; out.model = model; }
+  if (model === 'MRL-L' && stops > 7)        { model = 'MRL-G'; out.model = model; }
   if ((model === 'MRL-G'||model==='MRL-L') && capacity > 2000) { model = 'MR'; out.model = model; }
   if (model === 'MRL-G' && stops > 40) { model = 'MR'; out.model = model; }
   if ((model === 'HYD'||model==='Home Lift') && (travel > 12000 || stops > 3)) { model = 'MRL-G'; out.model = model; }
@@ -258,8 +270,8 @@ export const validate = (q: Partial<Quote>): ValidationResult => {
 
   // Reglas de modelo
   if (model === 'MRL-L') {
-    if (capacity > 450)  err('capacity', `MRL-L: máx. 450 kg. Actual: ${capacity} kg`);
-    if (stops > 8)       err('stops',    `MRL-L: máx. 8 paradas. Actual: ${stops}`);
+    if (capacity > 630)  err('capacity', `MRL-L: máx. 630 kg. Actual: ${capacity} kg`);
+    if (stops > 7)       err('stops',    `MRL-L: máx. 7 paradas. Actual: ${stops}`);
     if (!q.door_side || q.door_side === 'N/A')
       warn('door_side', 'MRL-L requiere especificar lado de apertura (muro de carga)');
   }
@@ -312,7 +324,7 @@ export const getAllowedModels = (capacity: number, stops: number, travel: number
   MODELS.filter(m => {
     const id = m.id;
     if ((id === 'HYD'||id==='Home Lift') && (travel > 12000 || stops > 3)) return false;
-    if (id === 'MRL-L' && (capacity > 450  || stops > 8)) return false;
+    if (id === 'MRL-L' && (capacity > 630  || stops > 7))  return false;
     if (id === 'MRL-G' && (capacity > 2000 || stops > 40)) return false;
     return true;
   });
@@ -353,15 +365,31 @@ export const CABIN_WALLS = [
 
 // ── Extras seleccionables de cabina ──────────────────────────
 export const CABIN_EXTRAS = [
-  { id: 'panoramico',      label: 'Panel panorámico',    use: ['Pasajeros']           },
-  { id: 'espejo-trasero',  label: 'Espejo trasero',       use: ['Pasajeros']           },
-  { id: 'espejo-lateral',  label: 'Espejo lateral',       use: ['Pasajeros']           },
-  { id: 'pasamanos-inox',  label: 'Pasamanos INOX',       use: ['Pasajeros','Carga']   },
-  { id: 'pasamanos-crom',  label: 'Pasamanos Cromado',    use: ['Pasajeros']           },
-  { id: 'led-premium',     label: 'Iluminación LED',      use: ['Pasajeros','Carga']   },
+  { id: 'espejo-trasero',  label: 'Espejo trasero',  use: ['Pasajeros'] },
 ] as const;
 
 export type CabinExtraId = typeof CABIN_EXTRAS[number]['id'];
+
+// Posiciones disponibles para panel panorámico
+export const PANORAMIC_POSITIONS = [
+  { id: 'izquierdo', label: 'Izquierdo' },
+  { id: 'derecho',   label: 'Derecho'   },
+  { id: 'fondo',     label: 'Fondo'     },
+] as const;
+
+// Tipos de pasamanos — imágenes en /catalog/pasamanos/
+export const PASAMANOS_TYPES = [
+  { id: 'pasamanos-lg-h11', label: 'LG-H11 Acrílico',        use: ['Pasajeros','Carga'], img: '/catalog/pasamanos/lg-h11.jpg' },
+  { id: 'pasamanos-lg-h13', label: 'LG-H13 Olmo Oro Rosa',   use: ['Pasajeros','Carga'], img: '/catalog/pasamanos/lg-h13.jpg' },
+  { id: 'pasamanos-lg-h15', label: 'LG-H15 Jade Oro Rosa',   use: ['Pasajeros','Carga'], img: '/catalog/pasamanos/lg-h15.jpg' },
+  { id: 'pasamanos-lg-h17', label: 'LG-H17 Doble Tubo',      use: ['Pasajeros','Carga'], img: '/catalog/pasamanos/lg-h17.jpg' },
+] as const;
+
+// Tipos de control — imágenes en /catalog/control/
+export const CONTROL_TYPES = [
+  { id: 'MONARCH',    label: 'Control Monarch',            img: '/catalog/control/monarch.jpg'    },
+  { id: 'ALAMEX-INT', label: 'Control Inteligente Alamex', img: '/catalog/control/alamex-int.jpg' },
+] as const;
 
 /** Genera la descripción de cabina a partir de los atributos seleccionados */
 export function buildCabinDescription(
@@ -373,12 +401,12 @@ export function buildCabinDescription(
 ): string {
   const parts: string[] = [];
   if (walls)  parts.push(`Cabina ${walls}`);
-  if (extras.includes('panoramico'))     parts.push('panel panorámico');
+  const panPositions = ['izquierdo','derecho','fondo'].filter(p => extras.includes(`panoramico-${p}`));
+  if (panPositions.length === 3) parts.push('cabina panorámica completa');
+  else if (panPositions.length > 0) parts.push(`panel panorámico ${panPositions.join(', ')}`);
   if (extras.includes('espejo-trasero')) parts.push('espejo trasero');
-  if (extras.includes('espejo-lateral')) parts.push('espejo lateral');
-  if (extras.includes('pasamanos-inox')) parts.push('pasamanos INOX');
-  if (extras.includes('pasamanos-crom')) parts.push('pasamanos cromado');
-  if (extras.includes('led-premium'))    parts.push('iluminación LED premium');
+  const pasamanosItem = PASAMANOS_TYPES.find(p => extras.includes(p.id));
+  if (pasamanosItem) parts.push(`pasamanos ${pasamanosItem.label}`);
   if (floor)  parts.push(`piso ${floor}`);
   if (plafon) parts.push(`plafón ${plafon}`);
   if (useType === 'Carga' || useType === 'Montaplatos') parts.push('uso industrial');
@@ -386,7 +414,6 @@ export function buildCabinDescription(
 }
 
 // ── Imagen: /public/catalog/finish/[id].jpg
-// Archivos esperados: inox.jpg, inox-mirror.jpg, titanium.jpg, epoxy-grey.jpg, epoxy-white.jpg, epoxy-beige.jpg
 export const CABIN_FINISHES = [
   { id: 'INOX',        label: 'Inox / Acero Inoxidable Mate 304', use: ['Pasajeros'],           img: '/catalog/finish/inox.jpg'        },
   { id: 'INOX-MIRROR', label: 'Inox / Acero Inoxidable Espejo',   use: ['Pasajeros'],           img: '/catalog/finish/inox-mirror.jpg' },
@@ -397,43 +424,30 @@ export const CABIN_FINISHES = [
 ];
 
 // ── Imagen: /public/catalog/floor/[id].jpg (80×80 px, muestra la textura)
-// Archivos esperados: star-galaxy.jpg, blanco-perla.jpg, tan-brown.jpg, etc.
 export const FLOOR_FINISHES = [
   { id: 'STAR-GALAXY',    label: 'Star Galaxy',    use: ['Pasajeros'],           img: '/catalog/floor/star-galaxy.jpg'    },
-  { id: 'BLANCO-PERLA',   label: 'Blanco Perla',   use: ['Pasajeros'],           img: '/catalog/floor/blanco-perla.jpg'   },
-  { id: 'TAN-BROWN',      label: 'Tan Brown',      use: ['Pasajeros'],           img: '/catalog/floor/tan-brown.jpg'      },
   { id: 'GIALLO-FIORITO', label: 'Giallo Fiorito', use: ['Pasajeros'],           img: '/catalog/floor/giallo-fiorito.jpg' },
-  { id: 'MELISA',         label: 'Melisa',         use: ['Pasajeros'],           img: '/catalog/floor/melisa.jpg'         },
-  { id: 'MULTICOLOR-RED', label: 'Multi-color Red',use: ['Pasajeros'],           img: '/catalog/floor/multicolor-red.jpg' },
   { id: 'SOFITA-BEJ',     label: 'Sofita Bej',     use: ['Pasajeros'],           img: '/catalog/floor/sofita-bej.jpg'     },
-  { id: 'AFRICAN-LILAC',  label: 'African Lilac',  use: ['Pasajeros'],           img: '/catalog/floor/african-lilac.jpg'  },
-  { id: 'NERO-ZIMBABWE',  label: 'Nero Zimbabwe',  use: ['Pasajeros'],           img: '/catalog/floor/nero-zimbabwe.jpg'  },
-  { id: 'AFRICAN-RED',    label: 'African Red',    use: ['Pasajeros'],           img: '/catalog/floor/african-red.jpg'    },
-  { id: 'EPOXY-FLOOR',    label: 'Epóxico Industrial', use: ['Carga','Montaplatos'], img: '/catalog/floor/epoxy-floor.jpg'    },
-  { id: 'ALUMINUM',       label: 'Aluminio antiderrapante', use: ['Carga','Montaplatos'], img: '/catalog/floor/aluminum.jpg' },
-  { id: 'GRATING',        label: 'Rejilla metálica',use: ['Carga','Montaplatos'], img: '/catalog/floor/grating.jpg'       },
+  { id: 'EPOXY-FLOOR',    label: 'Epóxico Industrial',      use: ['Carga','Montaplatos'], img: '/catalog/floor/epoxy-floor.jpg' },
+  { id: 'ALUMINUM',       label: 'Aluminio antiderrapante', use: ['Carga','Montaplatos'], img: '/catalog/floor/aluminum.jpg'    },
+  { id: 'GRATING',        label: 'Rejilla metálica',        use: ['Carga','Montaplatos'], img: '/catalog/floor/grating.jpg'     },
 ];
 
-// ── Imagen: /public/catalog/plafon/[id].jpg (150×150 px, foto del plafón)
-// Archivos esperados: lv-10.jpg, lv-12.jpg, ..., lv-74.jpg
-export const PLAFONOS = [
+// ── Imágenes en /public/catalog/plafon/[id].jpg (vista perspectiva)
+export const PLAFONOS_LV = [
   { id: 'LV-10', label: 'LV-10', img: '/catalog/plafon/lv-10.jpg' },
   { id: 'LV-12', label: 'LV-12', img: '/catalog/plafon/lv-12.jpg' },
-  { id: 'LV-20', label: 'LV-20', img: '/catalog/plafon/lv-20.jpg' },
   { id: 'LV-22', label: 'LV-22', img: '/catalog/plafon/lv-22.jpg' },
-  { id: 'LV-26', label: 'LV-26', img: '/catalog/plafon/lv-26.jpg' },
-  { id: 'LV-27', label: 'LV-27', img: '/catalog/plafon/lv-27.jpg' },
-  { id: 'LV-29', label: 'LV-29 ✓', img: '/catalog/plafon/lv-29.jpg' },
-  { id: 'LV-34', label: 'LV-34', img: '/catalog/plafon/lv-34.jpg' },
-  { id: 'LV-37', label: 'LV-37', img: '/catalog/plafon/lv-37.jpg' },
-  { id: 'LV-51', label: 'LV-51', img: '/catalog/plafon/lv-51.jpg' },
-  { id: 'LV-52', label: 'LV-52', img: '/catalog/plafon/lv-52.jpg' },
-  { id: 'LV-54', label: 'LV-54', img: '/catalog/plafon/lv-54.jpg' },
-  { id: 'LV-62', label: 'LV-62', img: '/catalog/plafon/lv-62.jpg' },
-  { id: 'LV-64', label: 'LV-64', img: '/catalog/plafon/lv-64.jpg' },
-  { id: 'LV-68', label: 'LV-68', img: '/catalog/plafon/lv-68.jpg' },
-  { id: 'LV-74', label: 'LV-74', img: '/catalog/plafon/lv-74.jpg' },
 ];
+
+export const PLAFONOS_LG = [
+  { id: 'LG-D01', label: 'LG-D01', img: '/catalog/plafon/lg-d01.jpg' },
+  { id: 'LG-D10', label: 'LG-D10', img: '/catalog/plafon/lg-d10.jpg' },
+  { id: 'LG-D11', label: 'LG-D11', img: '/catalog/plafon/lg-d11.jpg' },
+];
+
+// Array combinado — usado para lookups (QuoteDetail, QuoteForm, PDF)
+export const PLAFONOS = [...PLAFONOS_LV, ...PLAFONOS_LG];
 
 /** Genera la nomenclatura automática de pisos según el número de paradas */
 export const generateFloorNomenclature = (stops: number): string => {

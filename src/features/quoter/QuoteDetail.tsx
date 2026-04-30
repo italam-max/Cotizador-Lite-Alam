@@ -80,16 +80,28 @@ function PDFButton({ quote, sellerName, sellerTitle }: { quote: Quote; sellerNam
       const { pdf }              = await import('@react-pdf/renderer');
       const { QuotePDFDocument } = await import('../pdf/QuotePDF');
       const React = await import('react');
-      const { CABIN_WALLS, FLOOR_FINISHES, PLAFONOS } = await import('../../data/engineRules');
+      const { CABIN_WALLS, FLOOR_FINISHES, PLAFONOS, PASAMANOS_TYPES, CONTROL_TYPES } = await import('../../data/engineRules');
       const wallItem   = CABIN_WALLS.find((w: any) => w.label === quote.cabin_finish);
       const floorItem  = FLOOR_FINISHES.find((f: any) => f.label === quote.cabin_floor);
       const plafonItem = PLAFONOS.find((p: any) => p.id === quote.cop_model);
+      const extrasArr: string[] = (() => { try { return JSON.parse(quote.cabin_model || '[]'); } catch { return []; } })();
+      const isFullPan  = ['izquierdo','derecho','fondo'].every(p => extrasArr.includes(`panoramico-${p}`));
+      const pasId      = extrasArr.find((e: string) => e.startsWith('pasamanos-'));
+      const pasItem    = PASAMANOS_TYPES.find((p: any) => p.id === pasId);
+      const pdfOpts    = (() => { try { const r = (quote as any).pdf_options; return typeof r === 'string' ? JSON.parse(r) : (r || {}); } catch { return {}; } })();
+      const ctrlItem   = CONTROL_TYPES.find((c: any) => c.id === pdfOpts.control_id);
       const origin = window.location.origin;
       const toAbs  = (p: string) => p ? `${origin}${p}` : '';
       const element = React.createElement(QuotePDFDocument as any, {
         quote, seller: sellerName, sellerTitle,
-        cabinImage: `${origin}/catalog/cabin/Cabina-Pasajeros.png`,
+        cabinImage: isFullPan
+          ? `${origin}/catalog/cabin/Cabina-Panoramica.png`
+          : `${origin}/catalog/cabin/Cabina-Pasajeros.png`,
         wallImg: toAbs(wallItem?.img || ''), floorImg: toAbs(floorItem?.img || ''), plafonImg: toAbs(plafonItem?.img || ''),
+        pasamanImg: toAbs(pasItem?.img || ''), pasamanLabel: pasItem?.label || '',
+        controlImg: toAbs(ctrlItem?.img || ''), controlLabel: ctrlItem?.label || '',
+        motor1Img:  `${origin}/catalog/motor/motor-1.jpg`,
+        motor2Img:  `${origin}/catalog/motor/motor-2.jpg`,
       });
       const contentBlob = await pdf(element as any).toBlob();
       const { mergeAndDownload } = await import('../../services/pdfMerge');
@@ -221,7 +233,32 @@ function SendEmailButton({ quote, sellerName, sellerTitle }: { quote: Quote; sel
         const { pdf } = await import('@react-pdf/renderer');
         const { QuotePDFDocument } = await import('../pdf/QuotePDF');
         const React = await import('react');
-        const element = React.createElement(QuotePDFDocument as any, { quote, seller: sellerName, sellerTitle });
+        const { CABIN_WALLS, FLOOR_FINISHES, PLAFONOS, PASAMANOS_TYPES, CONTROL_TYPES } = await import('../../data/engineRules');
+        const origin2    = window.location.origin;
+        const toAbs2     = (p: string) => p ? `${origin2}${p}` : '';
+        const wallItem2  = CABIN_WALLS.find((w: any) => w.label === quote.cabin_finish);
+        const floorItem2 = FLOOR_FINISHES.find((f: any) => f.label === quote.cabin_floor);
+        const plafonItem2 = PLAFONOS.find((p: any) => p.id === quote.cop_model);
+        const extrasArr2: string[] = (() => { try { return JSON.parse(quote.cabin_model || '[]'); } catch { return []; } })();
+        const isFullPan2 = ['izquierdo','derecho','fondo'].every(p => extrasArr2.includes(`panoramico-${p}`));
+        const pasItem2   = PASAMANOS_TYPES.find((p: any) => p.id === extrasArr2.find((e: string) => e.startsWith('pasamanos-')));
+        const pdfOpts2   = (() => { try { const r = (quote as any).pdf_options; return typeof r === 'string' ? JSON.parse(r) : (r || {}); } catch { return {}; } })();
+        const ctrlItem2  = CONTROL_TYPES.find((c: any) => c.id === pdfOpts2.control_id);
+        const element = React.createElement(QuotePDFDocument as any, {
+          quote, seller: sellerName, sellerTitle,
+          cabinImage: isFullPan2
+            ? `${origin2}/catalog/cabin/Cabina-Panoramica.png`
+            : `${origin2}/catalog/cabin/Cabina-Pasajeros.png`,
+          wallImg:      toAbs2(wallItem2?.img   || ''),
+          floorImg:     toAbs2(floorItem2?.img  || ''),
+          plafonImg:    toAbs2(plafonItem2?.img || ''),
+          pasamanImg:   toAbs2(pasItem2?.img    || ''),
+          pasamanLabel: pasItem2?.label  || '',
+          controlImg:   toAbs2(ctrlItem2?.img   || ''),
+          controlLabel: ctrlItem2?.label || '',
+          motor1Img:    `${origin2}/catalog/motor/motor-1.jpg`,
+          motor2Img:    `${origin2}/catalog/motor/motor-2.jpg`,
+        });
         const blob = await pdf(element as any).toBlob();
         const reader = new FileReader();
         attachmentBase64 = await new Promise(resolve => {
@@ -313,10 +350,24 @@ export default function QuoteDetail({
 
   const extras: string[] = (() => { try { return JSON.parse(current.cabin_model || '[]'); } catch { return []; } })();
   const isExtrasJSON = Array.isArray(extras) && extras.length > 0 && typeof extras[0] === 'string' && extras[0].includes('-');
-  const extraLabels = isExtrasJSON ? extras.map((e: string) =>
-    ({ 'panoramico':'Panel panorámico','espejo-trasero':'Espejo trasero','espejo-lateral':'Espejo lateral',
-       'pasamanos-inox':'Pasamanos INOX','pasamanos-crom':'Pasamanos cromado','led-premium':'Iluminación LED' })[e] || e
-  ) : [];
+  const extraLabels: string[] = (() => {
+    if (!isExtrasJSON) return [];
+    const EL: Record<string,string> = {
+      'espejo-trasero': 'Espejo trasero',
+      'pasamanos-lg-h11': 'LG-H11 Acrílico',
+      'pasamanos-lg-h13': 'LG-H13 Olmo Oro Rosa',
+      'pasamanos-lg-h15': 'LG-H15 Jade Oro Rosa',
+      'pasamanos-lg-h17': 'LG-H17 Doble Tubo',
+    };
+    const panPos = ['izquierdo','derecho','fondo'].filter(p => extras.includes(`panoramico-${p}`));
+    const panLabel = panPos.length === 3
+      ? 'Cabina panorámica completa'
+      : panPos.length > 0
+        ? `Panel panorámico (${panPos.join(', ')})`
+        : null;
+    const others = extras.filter(e => !e.startsWith('panoramico-')).map(e => EL[e] || e);
+    return [...(panLabel ? [panLabel] : []), ...others];
+  })();
 
   const MODEL_LABELS: Record<string, string> = {
     'MR': 'Con Cuarto de Máquinas', 'MRL-L': 'Sin Cuarto · Chasis L',

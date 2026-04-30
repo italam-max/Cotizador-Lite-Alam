@@ -18,11 +18,11 @@ export const EMPTY_QUOTE: FormQuote = {
   control_group: 'Punto Matriz', traction: '',
   door_type: 'Automática Central', door_width: 1000, door_height: 2100,
   door_side: 'N/A', cabin_model: 'ASC', cabin_finish: 'Inox Satinado 304',
-  cabin_floor: 'Granito', cop_model: 'Display Inteligente', norm: 'EN 81-20',
+  cabin_floor: 'Star Galaxy', cop_model: 'LV-10', norm: 'EN 81-20',
   price: 0, currency: 'MXN', system_type: 'Simplex', labor_price: null, installation_city: '',
   internal_notes: '',
   commercial_terms: {
-    paymentMethod:      '50% Anticipo a la firma del Contrato\n25% Al aviso de embarque\n20% Al aviso de entrega del equipo en obra\n05% Al aviso de entrega en funcionamiento',
+    paymentMethod:      '50% Anticipo a la firma del Contrato\n25% Al aviso de embarque\n25% Al aviso de entrega del equipo en obra',
     paymentMethodLabor: '50% A la firma de contrato\n25% Al aviso de inicio de instalación\n20% Al termino del montaje\n05% Al aviso de entrega funcionando',
     deliveryTime: 'A confirmar tras anticipo',
     warranty: '12 meses en partes y mano de obra',

@@ -11,6 +11,7 @@
 // 9. Al guardar → vista previa PDF antes de descargar/enviar
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTheme } from '../../contexts/ThemeContext';
 import {
   ArrowLeft, ArrowRight, Save, Loader2,
   User, Settings2, DollarSign, AlertTriangle,
@@ -23,7 +24,8 @@ import { QuotesService, nextFolio } from '../../services/quotesService';
 import {
   computeDefaults, getAllowedModels, getAllowedSpeeds,
   validate, CAPACITIES, CAPACITY_PERSONS,
-  CABIN_WALLS, CABIN_EXTRAS, FLOOR_FINISHES, PLAFONOS,
+  CABIN_WALLS, CABIN_EXTRAS, FLOOR_FINISHES, PLAFONOS, PLAFONOS_LV, PLAFONOS_LG,
+  PANORAMIC_POSITIONS, PASAMANOS_TYPES, CONTROL_TYPES,
   generateFloorNomenclature, autoRails, autoTractionLabel
 } from '../../data/engineRules';
 import type { Quote } from '../../types';
@@ -122,18 +124,32 @@ function PDFPreviewModal({
       const { pdf }              = await import('@react-pdf/renderer');
       const { QuotePDFDocument } = await import('../pdf/QuotePDF');
       const React = await import('react');
-      const { CABIN_WALLS, FLOOR_FINISHES, PLAFONOS } = await import('../../data/engineRules');
+      const { CABIN_WALLS, FLOOR_FINISHES, PLAFONOS, PASAMANOS_TYPES, CONTROL_TYPES } = await import('../../data/engineRules');
       const origin     = window.location.origin;
       const toAbs      = (p: string) => p ? `${origin}${p}` : '';
       const wallItem   = CABIN_WALLS.find((w: any) => w.label === quote.cabin_finish);
       const floorItem  = FLOOR_FINISHES.find((f: any) => f.label === quote.cabin_floor);
       const plafonItem = PLAFONOS.find((p: any) => p.id === quote.cop_model);
+      const extrasArr: string[] = (() => { try { return JSON.parse(quote.cabin_model || '[]'); } catch { return []; } })();
+      const isFullPan  = ['izquierdo','derecho','fondo'].every(p => extrasArr.includes(`panoramico-${p}`));
+      const pasId      = extrasArr.find((e: string) => e.startsWith('pasamanos-'));
+      const pasItem    = PASAMANOS_TYPES.find((p: any) => p.id === pasId);
+      const pdfOpts    = (() => { try { const r = (quote as any).pdf_options; return typeof r === 'string' ? JSON.parse(r) : (r || {}); } catch { return {}; } })();
+      const ctrlItem   = CONTROL_TYPES.find((c: any) => c.id === pdfOpts.control_id);
       const element = React.createElement(QuotePDFDocument as any, {
         quote, seller: sellerName, sellerTitle,
-        cabinImage:  `${origin}/catalog/cabin/Cabina-Pasajeros.png`,
-        wallImg:     toAbs(wallItem?.img   || ''),
-        floorImg:    toAbs(floorItem?.img  || ''),
-        plafonImg:   toAbs(plafonItem?.img || ''),
+        cabinImage: isFullPan
+          ? `${origin}/catalog/cabin/Cabina-Panoramica.png`
+          : `${origin}/catalog/cabin/Cabina-Pasajeros.png`,
+        wallImg:      toAbs(wallItem?.img   || ''),
+        floorImg:     toAbs(floorItem?.img  || ''),
+        plafonImg:    toAbs(plafonItem?.img || ''),
+        pasamanImg:   toAbs(pasItem?.img    || ''),
+        pasamanLabel: pasItem?.label  || '',
+        controlImg:   toAbs(ctrlItem?.img   || ''),
+        controlLabel: ctrlItem?.label || '',
+        motor1Img:    `${origin}/catalog/motor/motor-1.jpg`,
+        motor2Img:    `${origin}/catalog/motor/motor-2.jpg`,
       });
       const contentBlob = await pdf(element as any).toBlob();
       const { mergeAndDownload } = await import('../../services/pdfMerge');
@@ -251,11 +267,13 @@ function PDFPreviewModal({
 // COMPONENTE PRINCIPAL
 // ══════════════════════════════════════════════════════════
 export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onCancel, onToastSuccess, onToastError }: Props) {
+  const { isDark } = useTheme();
   const [step,       setStep]       = useState(1);
   const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => { scrollRef.current?.scrollTo({ top: 0, behavior: 'instant' }); }, [step]);
   const [form,       setForm]       = useState<FormData>(() => (quote ? { ...EMPTY_QUOTE, ...quote } : { ...EMPTY_QUOTE, owner_id: '' }) as FormData);
   const [saving,     setSaving]     = useState(false);
+  const [panDiagramOpen, setPanDiagramOpen] = useState(false);
   const [errors,     setErrors]     = useState<{ field: string; msg: string }[]>([]);
   const [warnings,   setWarnings]   = useState<{ field: string; msg: string }[]>([]);
   const [savedQuote, setSavedQuote] = useState<Quote | null>(null); // para modal PDF
@@ -264,7 +282,13 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
     if ((quote as any)?.pdf_options) {
       try {
         const raw = (quote as any).pdf_options;
-        return typeof raw === 'string' ? JSON.parse(raw) : raw;
+        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        // Retrocompatibilidad: cotizaciones antiguas con seguridades guardadas
+        // pero sin sin_accesorios → marcarlas como "con accesorios" (sin_accesorios: false)
+        if (parsed.sin_accesorios === undefined && Array.isArray(parsed.seguridades) && parsed.seguridades.length > 0) {
+          return { ...parsed, sin_accesorios: false };
+        }
+        return parsed;
       } catch { return DEFAULT_PDF_OPTIONS; }
     }
     return DEFAULT_PDF_OPTIONS;
@@ -309,7 +333,7 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
             merged.cabin_floor  = 'Epóxico Industrial (antiderrapante)';
           } else {
             merged.cabin_finish = 'INOX Mate';       // wall finish
-            merged.cabin_floor  = 'Star Galaxy (granito negro)';
+            merged.cabin_floor  = 'Star Galaxy';
           }
           // Reset extras for new use type
           merged.cabin_model = '';
@@ -384,7 +408,7 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
     if (errors.some(e => e.field === 'client_name')) { setStep(1); return; }
     setSaving(true);
     try {
-      // cabin_model guarda el JSON array de extras (["espejo-trasero","led-premium",...])
+      // cabin_model guarda el JSON array de extras (["espejo-trasero","panoramico-derecho-1",...])
       // NO se sobreescribe con descripción — así QuoteDetail puede parsear los extras correctamente
       const dataToSave = {
         ...form,
@@ -462,8 +486,12 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
               disabled={saving || errors.some(e => e.field === 'client_name')}
               className="flex items-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-black uppercase tracking-wide transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
               style={{
-                background: errors.some(e => e.field === 'client_name') ? '#e2e8f0' : '#0A2463',
-                color: errors.some(e => e.field === 'client_name') ? '#94a3b8' : 'white',
+                background: errors.some(e => e.field === 'client_name')
+                  ? (isDark ? 'rgba(255,255,255,0.08)' : '#e2e8f0')
+                  : (isDark ? 'linear-gradient(135deg,#D4AF37,#B8951E)' : '#0A2463'),
+                color: errors.some(e => e.field === 'client_name')
+                  ? (isDark ? 'rgba(255,255,255,0.25)' : '#94a3b8')
+                  : (isDark ? '#0A0F1A' : 'white'),
                 fontFamily: "'Syne', sans-serif",
               }}>
               {saving ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />}
@@ -475,7 +503,8 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
 
         {/* Fila 2: Steps — siempre centrados */}
         <div className="px-3 sm:px-6 pb-2 flex justify-center sm:justify-start">
-          <div className="flex items-center gap-1 bg-[#0A2463]/5 rounded-xl p-1">
+          <div className="flex items-center gap-1 rounded-xl p-1"
+            style={{ background: isDark ? 'rgba(212,175,55,0.08)' : 'rgba(10,36,99,0.05)' }}>
             {STEPS.map(s => {
               const active = step === s.id;
               const done   = step > s.id;
@@ -485,8 +514,13 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
                   onClick={() => setStep(s.id)}
                   className="flex items-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-lg text-sm font-semibold transition-all"
                   style={{
-                    background: active ? '#0A2463' : 'transparent',
-                    color: active ? 'white' : done ? '#0A2463' : '#94a3b8',
+                    background: active
+                      ? (isDark ? 'linear-gradient(135deg,#D4AF37,#B8951E)' : '#0A2463')
+                      : 'transparent',
+                    color: active ? (isDark ? '#0A0F1A' : 'white')
+                         : done   ? (isDark ? '#D4AF37' : '#0A2463')
+                         : (isDark ? 'rgba(255,255,255,0.40)' : '#94a3b8'),
+                    fontWeight: active ? 800 : undefined,
                   }}>
                   {done ? <CheckCircle2 size={13} className="text-[#D4AF37]" /> : <s.icon size={13} />}
                   <span>{s.label}</span>
@@ -542,16 +576,30 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
 
               <SectionCard title="Tipo de proyecto">
                 <div className="grid grid-cols-3 gap-3">
-                  {(['Pasajeros','Carga','Montaplatos'] as const).map(t => (
+                  {(['Pasajeros','Carga','Montaplatos'] as const).map(t => {
+                    const sel = form.use_type === t;
+                    return (
                     <button key={t} onClick={() => update({ use_type: t })}
                       className="py-4 px-5 rounded-xl text-left transition-all border-2"
-                      style={{ background: form.use_type === t ? '#0A2463' : 'white', borderColor: form.use_type === t ? '#0A2463' : '#e2e8f0', color: form.use_type === t ? 'white' : '#0A2463' }}>
+                      style={{
+                        background: sel
+                          ? (isDark ? 'linear-gradient(135deg,rgba(212,175,55,0.22),rgba(184,149,30,0.18))' : '#0A2463')
+                          : (isDark ? 'rgba(6,14,30,0.80)' : 'white'),
+                        borderColor: sel
+                          ? (isDark ? '#D4AF37' : '#0A2463')
+                          : (isDark ? 'rgba(212,175,55,0.18)' : '#e2e8f0'),
+                        color: sel
+                          ? (isDark ? '#EDD060' : 'white')
+                          : (isDark ? 'rgba(255,255,255,0.65)' : '#0A2463'),
+                        boxShadow: sel && isDark ? '0 0 14px rgba(212,175,55,0.18)' : undefined,
+                      }}>
                       <p className="font-bold text-sm" style={{ fontFamily: "'Syne', sans-serif" }}>{t}</p>
                       <p className="text-xs mt-0.5 opacity-60">
                         {t === 'Pasajeros' ? 'Cabina estándar' : t === 'Carga' ? 'Cabina ACC · Epóxico' : 'Uso de servicios · Epóxico'}
                       </p>
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
               </SectionCard>
             </div>
@@ -597,21 +645,44 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
               {/* Modelo */}
               <SectionCard title="Modelo de equipo" icon={Settings2}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {allowedModels.map(m => (
+                  {allowedModels.map(m => {
+                    const sel = form.model === m.id;
+                    return (
                     <button key={m.id} onClick={() => update({ model: m.id })}
                       className="flex items-center gap-4 px-5 py-4 rounded-xl text-left transition-all border-2"
-                      style={{ background: form.model === m.id ? '#0A2463' : 'white', borderColor: form.model === m.id ? '#0A2463' : '#e2e8f0', color: form.model === m.id ? 'white' : '#0A2463' }}>
+                      style={{
+                        background: sel
+                          ? (isDark ? 'linear-gradient(135deg,rgba(212,175,55,0.20),rgba(184,149,30,0.15))' : '#0A2463')
+                          : (isDark ? 'rgba(6,14,30,0.75)' : 'white'),
+                        borderColor: sel
+                          ? (isDark ? '#D4AF37' : '#0A2463')
+                          : (isDark ? 'rgba(212,175,55,0.15)' : '#e2e8f0'),
+                        color: sel
+                          ? (isDark ? '#EDD060' : 'white')
+                          : (isDark ? 'rgba(255,255,255,0.65)' : '#0A2463'),
+                        boxShadow: sel && isDark ? '0 0 16px rgba(212,175,55,0.16)' : undefined,
+                      }}>
                       <div className="w-10 h-10 rounded-lg flex items-center justify-center font-black text-xs shrink-0 border"
-                        style={{ background: form.model === m.id ? 'rgba(255,255,255,0.15)' : '#f1f5f9', borderColor: form.model === m.id ? 'rgba(255,255,255,0.2)' : '#e2e8f0', fontFamily: "'Syne', sans-serif", color: form.model === m.id ? '#D4AF37' : '#475569' }}>
+                        style={{
+                          background: sel
+                            ? (isDark ? 'rgba(212,175,55,0.18)' : 'rgba(255,255,255,0.15)')
+                            : (isDark ? 'rgba(12,24,50,0.90)' : '#f1f5f9'),
+                          borderColor: sel
+                            ? (isDark ? 'rgba(212,175,55,0.45)' : 'rgba(255,255,255,0.2)')
+                            : (isDark ? 'rgba(212,175,55,0.15)' : '#e2e8f0'),
+                          fontFamily: "'Syne', sans-serif",
+                          color: sel ? '#D4AF37' : (isDark ? 'rgba(255,255,255,0.45)' : '#475569'),
+                        }}>
                         {m.id === 'MRL-L' ? 'L' : m.id === 'MRL-G' ? 'G' : m.id === 'HYD' ? 'HYD' : m.id === 'Home Lift' ? 'HL' : 'MR'}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-sm" style={{ fontFamily: "'Syne', sans-serif" }}>{m.label}</p>
                         <p className="text-xs mt-0.5 opacity-60 leading-tight">{m.desc}</p>
                       </div>
-                      {form.model === m.id && <CheckCircle2 size={18} className="shrink-0 text-[#D4AF37]" />}
+                      {sel && <CheckCircle2 size={18} className="shrink-0 text-[#D4AF37]" />}
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
               </SectionCard>
 
@@ -749,8 +820,173 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
                       <span className="text-[13px] font-semibold text-[#0A2463]/65">Extras de cabina</span>
                       <span className="text-xs text-[#0A2463]/40 font-medium">Selecciona los que apliquen</span>
                     </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {CABIN_EXTRAS.filter(e => (e.use as readonly string[]).includes(form.use_type || 'Pasajeros')).map(extra => {
+                    <div className="flex flex-col gap-2">
+
+                      {/* ── Panel panorámico ── */}
+                      {(form.use_type || 'Pasajeros') === 'Pasajeros' && (() => {
+                        const currentExtras: string[] = (() => { try { return JSON.parse(form.cabin_model || '[]'); } catch { return []; } })();
+                        const hasPan = currentExtras.some(e => e.startsWith('panoramico-'));
+                        const isFullPan = ['izquierdo','derecho','fondo'].every(p => currentExtras.includes(`panoramico-${p}`));
+                        const isOpen = panDiagramOpen || hasPan;
+
+                        const togglePosition = (pos: string) => {
+                          const hasPos = currentExtras.includes(`panoramico-${pos}`);
+                          let next = hasPos
+                            ? currentExtras.filter(e => e !== `panoramico-${pos}`)
+                            : [...currentExtras, `panoramico-${pos}`];
+                          // Si al agregar este panel queda panorámica completa → quitar espejo de fondo
+                          const afterSel = ['izquierdo','derecho','fondo'];
+                          const willBeFullPan = afterSel.every(p => next.includes(`panoramico-${p}`));
+                          if (willBeFullPan) next = next.filter(e => e !== 'espejo-trasero');
+                          update({ cabin_model: JSON.stringify(next) });
+                        };
+
+                        const sel = {
+                          izquierdo: currentExtras.includes('panoramico-izquierdo'),
+                          derecho:   currentExtras.includes('panoramico-derecho'),
+                          fondo:     currentExtras.includes('panoramico-fondo'),
+                        };
+
+                        return (
+                          <div className="rounded-xl border-2 overflow-hidden"
+                            style={{ borderColor: hasPan ? '#0A2463' : '#e2e8f0' }}>
+                            {/* Header toggle */}
+                            <button type="button"
+                              onClick={() => {
+                                if (isOpen) {
+                                  const next = currentExtras.filter(e => !e.startsWith('panoramico-'));
+                                  update({ cabin_model: JSON.stringify(next) });
+                                  setPanDiagramOpen(false);
+                                } else {
+                                  setPanDiagramOpen(true);
+                                }
+                              }}
+                              className="flex items-center gap-3 px-4 py-3 w-full text-left transition-all"
+                              style={{ background: hasPan ? '#0A2463' : 'white' }}>
+                              <div className="w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0"
+                                style={{ borderColor: hasPan ? '#D4AF37' : '#cbd5e1', background: hasPan ? '#D4AF37' : 'transparent' }}>
+                                {hasPan && (
+                                  <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                                    <path d="M1 4L3.5 6.5L9 1" stroke="#0A2463" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
+                                )}
+                              </div>
+                              <span className="text-xs font-semibold" style={{ color: hasPan ? 'white' : '#0A2463' }}>
+                                Panel panorámico{isFullPan ? ' — Cabina panorámica completa' : hasPan ? ` — ${['izquierdo','derecho','fondo'].filter(p => sel[p as keyof typeof sel]).join(', ')}` : ''}
+                              </span>
+                            </button>
+
+                            {/* Diagrama SVG de planta */}
+                            {isOpen && (
+                              <div className="px-4 pt-3 pb-4 bg-white border-t border-[#0A2463]/10">
+                                <p className="text-[10px] font-semibold text-[#0A2463]/40 uppercase tracking-wide mb-2 text-center">
+                                  Vista superior · Toca las paredes para seleccionar
+                                </p>
+                                <div className="flex justify-center">
+                                  <svg viewBox="0 0 200 168" className="w-full max-w-[230px] select-none">
+
+                                    {/* ── Piso (fondo interior) ── */}
+                                    <rect x="36" y="36" width="128" height="86" fill="#f1f5f9"/>
+
+                                    {/* ── Vidrio de pared seleccionada (strip interior) ── */}
+                                    {sel.fondo     && <rect x="36"  y="36" width="128" height="9" fill="rgba(140,195,255,0.40)"/>}
+                                    {sel.izquierdo && <rect x="36"  y="36" width="9"   height="86" fill="rgba(140,195,255,0.40)"/>}
+                                    {sel.derecho   && <rect x="155" y="36" width="9"   height="86" fill="rgba(140,195,255,0.40)"/>}
+
+                                    {/* ── Pared FONDO (arriba) ── */}
+                                    <rect x="20" y="20" width="160" height="16" rx="3"
+                                      fill={sel.fondo ? '#0A2463' : '#dde3ed'}
+                                      style={{ cursor: 'pointer' }}
+                                      onClick={() => togglePosition('fondo')}/>
+                                    <text x="100" y="32" textAnchor="middle" fontSize="8.5" fontWeight="700"
+                                      fill={sel.fondo ? '#D4AF37' : '#64748b'} style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                                      FONDO{sel.fondo ? ' ✓' : ''}
+                                    </text>
+
+                                    {/* ── Pared IZQUIERDA ── */}
+                                    <rect x="20" y="36" width="16" height="86" rx="3"
+                                      fill={sel.izquierdo ? '#0A2463' : '#dde3ed'}
+                                      style={{ cursor: 'pointer' }}
+                                      onClick={() => togglePosition('izquierdo')}/>
+                                    <text x="28" y="79" textAnchor="middle" fontSize="8" fontWeight="700"
+                                      fill={sel.izquierdo ? '#D4AF37' : '#64748b'}
+                                      transform="rotate(-90 28 79)" style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                                      IZQ{sel.izquierdo ? ' ✓' : ''}
+                                    </text>
+
+                                    {/* ── Pared DERECHA ── */}
+                                    <rect x="164" y="36" width="16" height="86" rx="3"
+                                      fill={sel.derecho ? '#0A2463' : '#dde3ed'}
+                                      style={{ cursor: 'pointer' }}
+                                      onClick={() => togglePosition('derecho')}/>
+                                    <text x="172" y="79" textAnchor="middle" fontSize="8" fontWeight="700"
+                                      fill={sel.derecho ? '#D4AF37' : '#64748b'}
+                                      transform="rotate(90 172 79)" style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                                      DER{sel.derecho ? ' ✓' : ''}
+                                    </text>
+
+                                    {/* ── Esquinas ── */}
+                                    <rect x="20" y="20" width="16" height="16"
+                                      fill={(sel.fondo || sel.izquierdo) ? '#0A2463' : '#c8d0df'} rx="3"/>
+                                    <rect x="164" y="20" width="16" height="16"
+                                      fill={(sel.fondo || sel.derecho) ? '#0A2463' : '#c8d0df'} rx="3"/>
+                                    <rect x="20" y="122" width="16" height="16"
+                                      fill={sel.izquierdo ? '#0A2463' : '#c8d0df'} rx="3"/>
+                                    <rect x="164" y="122" width="16" height="16"
+                                      fill={sel.derecho ? '#0A2463' : '#c8d0df'} rx="3"/>
+
+                                    {/* ── Pared frontal (no clickable) — lados ── */}
+                                    <rect x="20"  y="122" width="50" height="16" rx="3" fill="#c8d0df"/>
+                                    <rect x="130" y="122" width="50" height="16" rx="3" fill="#c8d0df"/>
+
+                                    {/* ── Apertura de puerta ── */}
+                                    <rect x="70" y="122" width="60" height="16" fill="none"
+                                      stroke="#D4AF37" strokeWidth="1.5" strokeDasharray="4,3" rx="2"/>
+                                    <text x="100" y="133" textAnchor="middle" fontSize="7.5" fill="#D4AF37"
+                                      fontWeight="700" style={{ pointerEvents: 'none', userSelect: 'none' }}>PUERTA</text>
+
+                                    {/* ── Etiqueta interior ── */}
+                                    <text x="100" y="78" textAnchor="middle" fontSize="9.5" fill="#94a3b8"
+                                      fontWeight="500" style={{ pointerEvents: 'none', userSelect: 'none' }}>CABINA</text>
+
+                                    {/* ── Badge panorámica completa ── */}
+                                    {isFullPan && (
+                                      <text x="100" y="94" textAnchor="middle" fontSize="8" fill="#0A2463"
+                                        fontWeight="700" style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                                        ✦ Panorámica completa
+                                      </text>
+                                    )}
+
+                                    {/* ── Flecha norte (orientación) ── */}
+                                    <text x="193" y="30" textAnchor="middle" fontSize="7" fill="#94a3b8"
+                                      style={{ pointerEvents: 'none', userSelect: 'none' }}>N</text>
+                                    <line x1="193" y1="33" x2="193" y2="44" stroke="#cbd5e1" strokeWidth="1.5"/>
+                                    <polygon points="193,33 190,39 196,39" fill="#cbd5e1"/>
+
+                                    {/* ── Indicador de dirección vista ── */}
+                                    <text x="100" y="158" textAnchor="middle" fontSize="7" fill="#cbd5e1"
+                                      style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                                      ← vista desde arriba →
+                                    </text>
+
+                                  </svg>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+
+                      {/* ── Otros extras simples ── */}
+                      {CABIN_EXTRAS.filter(e => {
+                        if (!(e.use as readonly string[]).includes(form.use_type || 'Pasajeros')) return false;
+                        // Ocultar espejo de fondo cuando hay panorámica completa
+                        if (e.id === 'espejo-trasero') {
+                          const ex: string[] = (() => { try { return JSON.parse(form.cabin_model || '[]'); } catch { return []; } })();
+                          if (['izquierdo','derecho','fondo'].every(p => ex.includes(`panoramico-${p}`))) return false;
+                        }
+                        return true;
+                      }).map(extra => {
                         const currentExtras: string[] = (() => { try { return JSON.parse(form.cabin_model || '[]'); } catch { return []; } })();
                         const isSelected = currentExtras.includes(extra.id);
                         return (
@@ -780,10 +1016,51 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
                     </div>
                   </div>
 
+                  {/* ── PASAMANOS ── */}
+                  <div className="col-span-2">
+                    <label className="flex items-center justify-between mb-3">
+                      <span className="text-[13px] font-semibold text-[#0A2463]/65">Pasamanos</span>
+                      <span className="text-xs text-[#0A2463]/40 font-medium">Tipo de perfil</span>
+                    </label>
+                    <div className="flex gap-2">
+                      {PASAMANOS_TYPES.filter(p => (p.use as readonly string[]).includes(form.use_type || 'Pasajeros')).map(tipo => {
+                        const currentExtras: string[] = (() => { try { return JSON.parse(form.cabin_model || '[]'); } catch { return []; } })();
+                        const isSelected = currentExtras.includes(tipo.id);
+                        return (
+                          <button key={tipo.id} type="button"
+                            onClick={() => {
+                              const withoutPas = currentExtras.filter(e => !e.startsWith('pasamanos-'));
+                              const next = isSelected ? withoutPas : [...withoutPas, tipo.id];
+                              update({ cabin_model: JSON.stringify(next) });
+                            }}
+                            className="flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all"
+                            style={{ borderColor: isSelected ? '#D4AF37' : '#e2e8f0', background: isSelected ? '#FFF8E7' : 'white', minWidth: 90 }}>
+                            <div className="w-[70px] h-[52px] rounded-lg overflow-hidden bg-[#f1f5f9] flex items-center justify-center">
+                              <img src={tipo.img} alt={tipo.label}
+                                className="w-full h-full object-cover"
+                                onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                              />
+                            </div>
+                            <span className="text-[11px] font-semibold" style={{ color: isSelected ? '#0A2463' : '#64748b' }}>
+                              {tipo.label}
+                            </span>
+                            {isSelected && (
+                              <div className="w-full flex justify-center">
+                                <div className="w-4 h-4 rounded-full flex items-center justify-center" style={{ background: '#D4AF37' }}>
+                                  <svg width="8" height="6" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#0A2463" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                </div>
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   {/* ── PISO DE CABINA ── */}
                   <CatalogPicker
                     title="Piso de cabina"
-                    hint={form.use_type === 'Pasajeros' ? 'Granitos importados' : 'Industrial'}
+                    hint={form.use_type === 'Pasajeros' ? 'Selecciona el acabado' : 'Industrial'}
                     items={FLOOR_FINISHES.filter(f => f.use.includes(form.use_type || 'Pasajeros'))}
                     value={form.cabin_floor || ''}
                     matchBy="label"
@@ -794,23 +1071,63 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
                   <CatalogPicker
                     title="Plafón — Catálogo LV"
                     hint="Haz clic para ver diseño"
-                    items={PLAFONOS}
-                    value={form.cop_model || 'LV-29'}
+                    items={PLAFONOS_LV}
+                    value={form.cop_model || 'LV-10'}
                     matchBy="id"
                     onSelect={p => update({ cop_model: p.id })}
                     width={70} height={52}
                   />
 
+                  <CatalogPicker
+                    title="Plafón — Catálogo LG"
+                    hint="Haz clic para ver diseño"
+                    items={PLAFONOS_LG}
+                    value={form.cop_model || ''}
+                    matchBy="id"
+                    onSelect={p => update({ cop_model: p.id })}
+                    width={70} height={52}
+                  />
 
-                  <Field label="Normativa aplicable">
-                    <select className={SELECT} value={form.norm}
-                      onChange={e => update({ norm: e.target.value })}>
-                      <option value="EN 81-20">EN 81-20 (estándar)</option>
-                      <option value="EN 81-1">EN 81-1</option>
-                      <option value="ASME A17.1">ASME A17.1</option>
-                      <option value="NOM-053">NOM-053</option>
-                    </select>
-                  </Field>
+                  {/* ── CONTROL ── */}
+                  <div className="col-span-2">
+                    <label className="flex items-center justify-between mb-3">
+                      <span className="text-[13px] font-semibold text-[#0A2463]/65">Control</span>
+                      <span className="text-xs text-[#0A2463]/40 font-medium">Imagen de referencia</span>
+                    </label>
+                    <div className="flex gap-2">
+                      {CONTROL_TYPES.map(ctrl => {
+                        const isSelected = pdfOptions.control_id === ctrl.id;
+                        return (
+                          <button key={ctrl.id} type="button"
+                            onClick={() => setPdfOptions(prev => ({ ...prev, control_id: isSelected ? '' : ctrl.id }))}
+                            className="flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all"
+                            style={{ borderColor: isSelected ? '#D4AF37' : '#e2e8f0', background: isSelected ? '#FFF8E7' : 'white', minWidth: 100 }}>
+                            <div className="w-[80px] h-[60px] rounded-lg overflow-hidden bg-[#f1f5f9] flex items-center justify-center">
+                              <img src={ctrl.img} alt={ctrl.label}
+                                className="w-full h-full object-cover"
+                                onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                              />
+                            </div>
+                            <span className="text-[11px] font-semibold text-center leading-tight" style={{ color: isSelected ? '#0A2463' : '#64748b' }}>
+                              {ctrl.label}
+                            </span>
+                            {isSelected && (
+                              <div className="w-4 h-4 rounded-full flex items-center justify-center" style={{ background: '#D4AF37' }}>
+                                <svg width="8" height="6" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#0A2463" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[11px] font-semibold text-[#0A2463]/50 uppercase tracking-wide">Normativa aplicable</span>
+                    <div className="px-3 py-2 rounded-xl bg-[#EBF0FB] border border-[#0A2463]/10 text-xs font-semibold text-[#0A2463]">
+                      EN 81-20 (Estándar) · NOM-053
+                    </div>
+                  </div>
                 </div>
 
                 {/* Especificaciones técnicas editables */}
@@ -838,8 +1155,16 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
                 </div>
               </SectionCard>
 
-              {/* ── ACCESORIOS OPCIONALES — antes "Opciones del PDF" ── */}
-              <SectionCard title="Accesorios opcionales" note="Define qué incluir en la propuesta del cliente">
+              {/* ── ACCESORIOS OPCIONALES — obligatorio elegir ── */}
+              <SectionCard
+                title="Accesorios opcionales"
+                note={
+                  pdfOptions.sin_accesorios === true
+                    ? 'Sin accesorios'
+                    : pdfOptions.seguridades.length > 0
+                      ? `${pdfOptions.seguridades.length} seleccionados`
+                      : '⚠️ Por definir'
+                }>
                 <PDFOptionsSection value={pdfOptions} onChange={setPdfOptions} />
               </SectionCard>
 
@@ -878,10 +1203,21 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
                   <div className="grid grid-cols-2 gap-3">
                     {(['Turco','Chino'] as const).map(s => {
                       const isForced = s === 'Turco' && dimWarnings.length > 0;
+                      const selS = form.supplier === s;
                       return (
                         <button key={s} onClick={() => !isForced && update({ supplier: s })}
                           className="py-3 px-4 rounded-xl text-left transition-all border-2 relative"
-                          style={{ background: form.supplier === s ? '#0A2463' : 'white', borderColor: form.supplier === s ? '#0A2463' : '#e2e8f0', color: form.supplier === s ? 'white' : '#0A2463' }}>
+                          style={{
+                            background: selS
+                              ? (isDark ? 'linear-gradient(135deg,rgba(212,175,55,0.22),rgba(184,149,30,0.15))' : '#0A2463')
+                              : (isDark ? 'rgba(6,14,30,0.80)' : 'white'),
+                            borderColor: selS
+                              ? (isDark ? '#D4AF37' : '#0A2463')
+                              : (isDark ? 'rgba(212,175,55,0.15)' : '#e2e8f0'),
+                            color: selS
+                              ? (isDark ? '#EDD060' : 'white')
+                              : (isDark ? 'rgba(255,255,255,0.60)' : '#0A2463'),
+                          }}>
                           <p className="font-bold text-sm" style={{ fontFamily: "'Syne', sans-serif" }}>
                             {s === 'Turco' ? '🇹🇷' : '🇨🇳'} {s}
                           </p>
@@ -928,8 +1264,13 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
                     onClick={() => update({ labor_price: form.labor_price != null ? null : 0 })}
                     className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all text-left"
                     style={{
-                      borderColor: form.labor_price != null ? '#0A2463' : '#e2e8f0',
-                      background:  form.labor_price != null ? '#0A2463' : 'white',
+                      borderColor: form.labor_price != null
+                        ? (isDark ? '#D4AF37' : '#0A2463')
+                        : (isDark ? 'rgba(212,175,55,0.18)' : '#e2e8f0'),
+                      background: form.labor_price != null
+                        ? (isDark ? 'linear-gradient(135deg,rgba(212,175,55,0.20),rgba(184,149,30,0.14))' : '#0A2463')
+                        : (isDark ? 'rgba(6,14,30,0.75)' : 'white'),
+                      boxShadow: form.labor_price != null && isDark ? '0 0 14px rgba(212,175,55,0.14)' : undefined,
                     }}>
                     <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${form.labor_price != null ? 'bg-[#D4AF37] border-[#D4AF37]' : 'bg-white border-[#0A2463]/20'}`}>
                       {form.labor_price != null && <CheckCircle2 size={13} className="text-[#0A2463]" />}
@@ -961,7 +1302,13 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
 
                 {form.price > 0 && (
                   <div className="mt-5 p-5 rounded-xl space-y-2"
-                    style={{ background: '#0A2463' }}>
+                    style={{
+                      background: isDark
+                        ? 'linear-gradient(135deg,#0D1E42 0%,#091529 100%)'
+                        : '#0A2463',
+                      border: isDark ? '1px solid rgba(212,175,55,0.35)' : undefined,
+                      boxShadow: isDark ? '0 0 24px rgba(212,175,55,0.10)' : undefined,
+                    }}>
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-[10px] font-bold uppercase tracking-widest text-[#D4AF37] mb-1">
@@ -1010,10 +1357,10 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
                       className={INPUT + ' resize-none text-xs font-mono leading-relaxed'}
                       value={
                         form.commercial_terms?.paymentMethod ||
-                        '50% Anticipo a la firma del Contrato\n25% Al aviso de embarque\n20% Al aviso de entrega del equipo en obra\n05% Al aviso de entrega en funcionamiento'
+                        '50% Anticipo a la firma del Contrato\n25% Al aviso de embarque\n25% Al aviso de entrega del equipo en obra'
                       }
                       onChange={e => update({ commercial_terms: { ...form.commercial_terms!, paymentMethod: e.target.value } })}
-                      placeholder="50% Anticipo a la firma del Contrato&#10;25% Al aviso de embarque&#10;20% Al aviso de entrega del equipo en obra&#10;05% Al aviso de entrega en funcionamiento"
+                      placeholder="50% Anticipo a la firma del Contrato&#10;25% Al aviso de embarque&#10;25% Al aviso de entrega del equipo en obra"
                     />
                   </Field>
 
@@ -1065,20 +1412,41 @@ export default function QuoteForm({ quote, sellerName, sellerTitle, onSaved, onC
           {STEPS.map(s => (
             <button key={s.id} onClick={() => setStep(s.id)}
               className="rounded-full transition-all duration-300"
-              style={{ width: step === s.id ? 24 : 8, height: 8, background: step === s.id ? '#0A2463' : step > s.id ? '#D4AF37' : '#cbd5e1' }} />
+              style={{
+                width: step === s.id ? 24 : 8,
+                height: 8,
+                background: step === s.id
+                  ? (isDark ? '#D4AF37' : '#0A2463')
+                  : step > s.id
+                    ? '#D4AF37'
+                    : (isDark ? 'rgba(255,255,255,0.18)' : '#cbd5e1'),
+                boxShadow: step === s.id && isDark ? '0 0 8px rgba(212,175,55,0.55)' : undefined,
+              }} />
           ))}
         </div>
 
         {step < 3 ? (
           <button onClick={() => setStep(s => s + 1)}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black text-white transition-all active:scale-95"
-            style={{ background: '#0A2463', fontFamily: "'Syne', sans-serif" }}>
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black transition-all active:scale-95"
+            style={{
+              background: isDark ? 'linear-gradient(135deg,#D4AF37,#B8951E)' : '#0A2463',
+              color: isDark ? '#0A0F1A' : 'white',
+              fontFamily: "'Syne', sans-serif",
+            }}>
             Siguiente <ArrowRight size={16} />
           </button>
         ) : (
           <button onClick={handleSave} disabled={saving || errors.length > 0}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black text-white transition-all active:scale-95 disabled:opacity-40"
-            style={{ background: errors.length > 0 ? '#94a3b8' : '#0A2463', fontFamily: "'Syne', sans-serif" }}>
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black transition-all active:scale-95 disabled:opacity-40"
+            style={{
+              background: errors.length > 0
+                ? (isDark ? 'rgba(255,255,255,0.08)' : '#94a3b8')
+                : (isDark ? 'linear-gradient(135deg,#D4AF37,#B8951E)' : '#0A2463'),
+              color: errors.length > 0
+                ? (isDark ? 'rgba(255,255,255,0.25)' : 'white')
+                : (isDark ? '#0A0F1A' : 'white'),
+              fontFamily: "'Syne', sans-serif",
+            }}>
             {saving ? <Loader2 size={16} className="animate-spin" /> : <Eye size={16} />}
             {saving ? 'Guardando...' : 'Guardar y ver PDF'}
           </button>
