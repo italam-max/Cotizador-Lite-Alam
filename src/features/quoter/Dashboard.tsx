@@ -16,6 +16,18 @@ interface Props {
   onOpenDetail: (q: Quote) => void;
 }
 
+// Etiqueta corta para el badge de modelo
+const modelBadge = (model: string): string => {
+  const map: Record<string, string> = {
+    'MR':        'MR',
+    'MRL-L':     'L',
+    'MRL-G':     'G',
+    'HYD':       'HYD',
+    'Home Lift': 'HL',
+  };
+  return map[model] ?? model.substring(0, 3);
+};
+
 // Colores de modelo — del original
 const getModelColor = (model: string) => {
   const map: Record<string, string> = {
@@ -186,7 +198,7 @@ export default function Dashboard({ onNewQuote, onEditQuote, onOpenDetail }: Pro
                       <div className="flex items-center gap-4 min-w-0 w-full sm:w-auto">
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 font-black text-xs border bg-white ${getModelColor(q.model)}`}
                           style={{ fontFamily: "'Syne', sans-serif" }}>
-                          {q.model.substring(0,2)}
+                          {modelBadge(q.model)}
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 mb-0.5 flex-wrap">

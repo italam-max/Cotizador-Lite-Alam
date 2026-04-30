@@ -39,10 +39,24 @@ const MODEL_LABELS: Record<string, string> = {
 };
 
 // ── SEGURIDADES ADICIONALES ──────────────────────────────────
+// Lista maestra — se gestiona desde PDFOptionsSection (Paso 2)
 export const TODAS_SEGURIDADES = [
   'Sistema de paracaídas',
   'Sensor de carga (báscula de sobrecarga)',
   'Sensor de velocidad',
+  'Cortina de luz',
+  'Rescate automático en caso de corte de luz',
+  'Sistema anti-incendio / Alarma de incendio',
+  'Sensor sísmico',
+  'Amortiguadores',
+  'Botón de alarma',
+  'Nivelación automática',
+  'Apagado automático de luz de cabina',
+  'Ventilador de cabina',
+  'Scanner de error (Español + 5 idiomas)',
+  'Botoneras Punto Matriz (COP y LOP)',
+  'Protección de atascamiento y recalentamiento del motor',
+  'Puerta abierta con botón de piso',
 ];
 
 // ── ESTILOS ──────────────────────────────────────────────────
@@ -159,6 +173,12 @@ interface Props {
   wallImg?:     string;
   floorImg?:    string;
   plafonImg?:   string;
+  pasamanImg?:   string;
+  pasamanLabel?: string;
+  controlImg?:   string;
+  controlLabel?: string;
+  motor1Img?:    string;
+  motor2Img?:    string;
 }
 
 export function QuotePDFDocument({
@@ -169,6 +189,12 @@ export function QuotePDFDocument({
   wallImg,
   floorImg,
   plafonImg,
+  pasamanImg,
+  pasamanLabel,
+  controlImg,
+  controlLabel,
+  motor1Img,
+  motor2Img,
 }: Props) {
   const fmt = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
   const quoteDate = q.project_date
@@ -191,7 +217,7 @@ export function QuotePDFDocument({
     : 'Simplex');
 
   const terms = q.commercial_terms || {
-    paymentMethod:      '50% Anticipo a la firma del Contrato\n25% Al aviso de embarque\n20% Al aviso de entrega del equipo en obra\n05% Al aviso de entrega en funcionamiento',
+    paymentMethod:      '50% Anticipo a la firma del Contrato\n25% Al aviso de embarque\n25% Al aviso de entrega del equipo en obra',
     paymentMethodLabor: '50% A la firma de contrato\n25% Al aviso de inicio de instalación\n20% Al termino del montaje\n05% Al aviso de entrega funcionando',
     deliveryTime:       'A confirmar tras anticipo',
     warranty:           '12 meses en partes y mano de obra',
@@ -200,7 +226,11 @@ export function QuotePDFDocument({
   };
 
   const opts = q.pdf_options ?? {};
-  const seguridadesActivas: string[] = opts.seguridades ?? TODAS_SEGURIDADES;
+  // sin_accesorios = true → no mostrar seguridades en PDF
+  const sinAccesorios: boolean = opts.sin_accesorios === true;
+  const seguridadesActivas: string[] = sinAccesorios ? [] : (opts.seguridades ?? TODAS_SEGURIDADES);
+  // Pág 4: ¿tiene contenido en la columna derecha?
+  const rightColHasContent = seguridadesActivas.length > 0 || q.model === 'MRL-G';
 
   return (
     <Document title={`Propuesta ${q.folio} — ${q.client_name}`} author="Elevadores Alamex">
@@ -393,9 +423,11 @@ export function QuotePDFDocument({
                     const ex: string[] = JSON.parse(q.cabin_model || '[]');
                     if (Array.isArray(ex) && ex.length > 0) {
                       const EL: Record<string, string> = {
-                        'espejo-trasero':     'Espejo fondo',
-                        'pasamanos-redondo':  'Pasam. redondo',
-                        'pasamanos-cuadrado': 'Pasam. cuadrado',
+                        'espejo-trasero':    'Espejo fondo',
+                        'pasamanos-lg-h11':  'LG-H11 Acrílico',
+                        'pasamanos-lg-h13':  'LG-H13 Olmo Oro Rosa',
+                        'pasamanos-lg-h15':  'LG-H15 Jade Oro Rosa',
+                        'pasamanos-lg-h17':  'LG-H17 Doble Tubo',
                       };
                       const panPos = ['izquierdo','derecho','fondo'].filter(p => ex.includes(`panoramico-${p}`));
                       const panLabel = panPos.length === 3
@@ -443,7 +475,7 @@ export function QuotePDFDocument({
           </View>
 
           {/* ── Materiales seleccionados ── */}
-          {(wallImg || floorImg || plafonImg) && (
+          {(wallImg || floorImg || plafonImg || pasamanImg) && (
             <View style={{ marginTop: 12 }}>
               <View style={{ height: 1, backgroundColor: GOLD, marginBottom: 8 }} />
               <Text style={{ fontSize: 9, fontFamily: PJSansBold, color: NAVY, letterSpacing: 0.5, marginBottom: 8, textTransform: 'uppercase' }}>
@@ -471,6 +503,20 @@ export function QuotePDFDocument({
                     <Text style={{ fontSize: 9.5, color: BLK, fontFamily: PJSansBold, textAlign: 'center' }}>{q.cop_model}</Text>
                   </View>
                 ) : null}
+                {pasamanImg ? (
+                  <View style={{ alignItems: 'center', flex: 1 }}>
+                    <Image src={pasamanImg} style={{ width: 55, height: 55, objectFit: 'cover', borderRadius: 4, borderWidth: 1, borderColor: '#E0E0E0' }} />
+                    <Text style={{ fontSize: 9, color: GRAY, marginTop: 4, textAlign: 'center' }}>Pasamanos</Text>
+                    <Text style={{ fontSize: 9.5, color: BLK, fontFamily: PJSansBold, textAlign: 'center' }}>{pasamanLabel}</Text>
+                  </View>
+                ) : null}
+              </View>
+              {/* Disclaimer */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 7 }}>
+                <View style={{ width: 10, height: 1.5, backgroundColor: GOLD }} />
+                <Text style={{ fontSize: 7.5, color: GRAY, fontStyle: 'italic' }}>
+                  Imágenes de referencia · El diseño, color y acabado final pueden variar según disponibilidad y configuración del equipo.
+                </Text>
               </View>
             </View>
           )}
@@ -480,17 +526,20 @@ export function QuotePDFDocument({
         <IFooter seller={seller} title={sellerTitle} />
       </Page>
 
-      {/* ══ PÁG 4 — PUERTAS · SEGURIDADES · CALIDAD · VENTAJAS ══ */}
+      {/* ══ PÁG 4 — PUERTAS · CONTROL · MOTORES · SEGURIDADES ══ */}
       <Page size="LETTER" style={S.page}>
         <View style={S.stripTop} /><View style={S.stripTop2} />
         <IHeader folio={q.folio} client={q.client_name} page={4} />
 
         <View style={S.body}>
-          <View style={S.cols}>
+          <View style={rightColHasContent ? S.cols : {}}>
 
-            <View style={S.col}>
+            {/* ── Columna izquierda ── */}
+            <View style={rightColHasContent ? S.col : {}}>
+
+              {/* PUERTAS */}
               <Text style={S.secTitle}>PUERTAS</Text>
-              <View style={{ borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 4, overflow: 'hidden', marginBottom: 9 }}>
+              <View style={{ borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
                 <Spec label="Puertas de piso"   value={`${q.stops} puertas`} />
                 <Spec label="Puertas de cabina" value="1 puerta" alt />
                 <Spec label="Tipo de puerta"    value={q.door_type} />
@@ -498,48 +547,119 @@ export function QuotePDFDocument({
                 <Spec label="Acabado"           value={q.use_type === 'Pasajeros' ? 'Acero Inoxidable (INOX)' : 'Pintura Epóxica Industrial'} />
               </View>
 
-              {/* Normativa EN 81-20 + NOM-053 — dato informativo compacto */}
-              <View style={S.infoBox}>
-                <Text style={S.infoTitle}>Normativa aplicable: EN 81-20 (Estándar) + NOM-053</Text>
-                {/* Bloque 1 */}
-                <Text style={[S.infoText, { fontFamily: PJSansBold, marginTop: 4 }]}>Seguridad en cabina y cubo</Text>
-                <Text style={S.infoText}>
-                  Cabina cerrada · Paracaídas de seguridad · Frenos automáticos · Iluminación de emergencia · Botón de paro (rojo, en techo)
-                </Text>
-                {/* Bloque 2 */}
-                <Text style={[S.infoText, { fontFamily: PJSansBold, marginTop: 4 }]}>Diseño e instalación</Text>
-                <Text style={S.infoText}>
-                  Puertas del cubo con chapa de seguridad (abre sin llave desde interior) · Dimensiones mínimas: 1.80 m × 0.70 m · Distancias libres en cubo
-                </Text>
-                {/* Bloque 3 */}
-                <Text style={[S.infoText, { fontFamily: PJSansBold, marginTop: 4 }]}>Señalización y documentación</Text>
-                <Text style={S.infoText}>
-                  Capacidad (kg), máx. personas y fabricante indicados de forma indeleble · Leyendas de advertencia en montacargas
-                </Text>
-                {/* Bloque 4 */}
-                <Text style={[S.infoText, { fontFamily: PJSansBold, marginTop: 4 }]}>Alcance y responsabilidad</Text>
-                <Text style={S.infoText}>
-                  Aplica a elevadores eléctricos de tracción nuevos · Responsable: contratista / empresa instaladora
-                </Text>
-              </View>
-            </View>
-
-            <View style={S.col}>
-              {seguridadesActivas.length > 0 && (
+              {/* CONTROL — tarjeta vertical portrait */}
+              {controlImg ? (
                 <>
-                  <Text style={S.secTitle}>SEGURIDADES ADICIONALES</Text>
-                  {seguridadesActivas.map((s, i) => <Bullet key={i} text={s} />)}
+                  <Text style={S.secTitle}>CONTROL</Text>
+                  <View style={{ flexDirection: 'row', gap: 0, marginBottom: 12 }}>
+                    {/* Imagen vertical a la izquierda */}
+                    <View style={{ borderWidth: 1.5, borderColor: NAVY, borderRadius: 5, width: 90 }}>
+                      <View style={{ height: 3, backgroundColor: GOLD }} />
+                      <Image
+                        src={controlImg}
+                        style={{ width: 90, height: 160, objectFit: 'contain' }}
+                      />
+                      <View style={{ backgroundColor: NAVY, paddingVertical: 4, paddingHorizontal: 4 }}>
+                        <Text style={{ fontSize: 6.5, color: GOLD, fontFamily: PJSansBold, textAlign: 'center', letterSpacing: 0.5 }}>
+                          ALAMEX
+                        </Text>
+                      </View>
+                    </View>
+                    {/* Etiqueta a la derecha */}
+                    <View style={{ flex: 1, paddingLeft: 10, justifyContent: 'center' }}>
+                      <Text style={{ fontSize: 8, color: GRAY, marginBottom: 3 }}>Sistema de control</Text>
+                      <Text style={{ fontSize: 10, fontFamily: PJSansBold, color: NAVY, lineHeight: 1.4 }}>
+                        {controlLabel}
+                      </Text>
+                      <View style={{ marginTop: 6, height: 2, backgroundColor: GOLD, width: 28 }} />
+                    </View>
+                  </View>
                 </>
-              )}
+              ) : null}
 
-              <View style={[S.infoBoxGold, { marginTop: seguridadesActivas.length > 0 ? 9 : 0 }]}>
-                <Text style={S.infoTitle}>Ventajas del sistema ALAMEX</Text>
-                <Bullet text="Bajo consumo de energía eléctrica" />
-                <Bullet text="Mayor confort en arranque y frenado" />
-                <Bullet text="Sistema de rescate automático integrado" />
-                <Bullet text="Diagnóstico en español y 5 idiomas más" />
+              {/* MOTORES — siempre se muestran, estilo brochure */}
+              <Text style={S.secTitle}>MOTOR / MÁQUINA DE TRACCIÓN</Text>
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 5 }}>
+                {motor1Img ? (
+                  <View style={{ flex: 1, borderWidth: 1.5, borderColor: NAVY, borderRadius: 5 }}>
+                    <View style={{ height: 3, backgroundColor: GOLD }} />
+                    <Image
+                      src={motor1Img}
+                      style={{ width: '100%', height: 95, objectFit: 'cover' }}
+                    />
+                    <View style={{ backgroundColor: NAVY, paddingVertical: 4, paddingHorizontal: 6 }}>
+                      <Text style={{ fontSize: 7, color: GOLD, fontFamily: PJSansBold, textAlign: 'center', letterSpacing: 0.6 }}>
+                        ALAMEX
+                      </Text>
+                      <Text style={{ fontSize: 7.5, color: WHITE, textAlign: 'center', lineHeight: 1.3 }}>
+                        Máquina de tracción
+                      </Text>
+                    </View>
+                  </View>
+                ) : null}
+                {motor2Img ? (
+                  <View style={{ flex: 1, borderWidth: 1.5, borderColor: NAVY, borderRadius: 5 }}>
+                    <View style={{ height: 3, backgroundColor: GOLD }} />
+                    <Image
+                      src={motor2Img}
+                      style={{ width: '100%', height: 95, objectFit: 'cover' }}
+                    />
+                    <View style={{ backgroundColor: NAVY, paddingVertical: 4, paddingHorizontal: 6 }}>
+                      <Text style={{ fontSize: 7, color: GOLD, fontFamily: PJSansBold, textAlign: 'center', letterSpacing: 0.6 }}>
+                        ALAMEX
+                      </Text>
+                      <Text style={{ fontSize: 7.5, color: WHITE, textAlign: 'center', lineHeight: 1.3 }}>
+                        Sistema de tracción
+                      </Text>
+                    </View>
+                  </View>
+                ) : null}
               </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 }}>
+                <View style={{ width: 10, height: 1.5, backgroundColor: GOLD }} />
+                <Text style={{ fontSize: 7.5, color: GRAY, fontStyle: 'italic' }}>
+                  Imágenes de referencia · El modelo puede variar según configuración del equipo
+                </Text>
+              </View>
+
             </View>
+
+            {/* ── Columna derecha — solo si tiene contenido ── */}
+            {rightColHasContent && (
+              <View style={S.col}>
+
+                {/* SEGURIDADES ADICIONALES — 100 % dinámico desde pdf_options */}
+                {seguridadesActivas.length > 0 && (
+                  <>
+                    <Text style={S.secTitle}>SEGURIDADES ADICIONALES</Text>
+                    {seguridadesActivas.map((s, i) => <Bullet key={i} text={s} />)}
+                  </>
+                )}
+
+                {/* DESCRIPCIÓN TÉCNICA — solo para MRL-G */}
+                {q.model === 'MRL-G' && (
+                  <View style={[S.infoBox, { marginTop: seguridadesActivas.length > 0 ? 12 : 0, borderLeftColor: NAVY, borderLeftWidth: 4, backgroundColor: '#EBF0FB' }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 6 }}>
+                      <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: NAVY, alignItems: 'center', justifyContent: 'center' }}>
+                        <Text style={{ fontSize: 9, color: GOLD, fontFamily: PJSansBold }}>G</Text>
+                      </View>
+                      <Text style={{ fontSize: 10, fontFamily: PJSansBold, color: NAVY }}>
+                        Tecnología MRL-G
+                      </Text>
+                    </View>
+                    <Text style={[S.infoText, { lineHeight: 1.7 }]}>
+                      Cuenta con una máquina de tecnología de imanes permanentes, compacta, silenciosa,
+                      sin engranes y de alta eficiencia energética. El peso reducido y la flexibilidad del
+                      sistema posibilitan la utilización de una máquina más compacta que optimiza la
+                      ocupación de espacio con un motor más eficiente, sin cambios de aceite, con poco
+                      mantenimiento y por tanto más ecológica.
+                    </Text>
+                    <View style={{ marginTop: 8, height: 2, backgroundColor: GOLD, borderRadius: 1 }} />
+                  </View>
+                )}
+
+              </View>
+            )}
 
           </View>
         </View>
@@ -593,7 +713,7 @@ export function QuotePDFDocument({
               <View style={S.condHead}>
                 <Text style={S.condHCell}>Equipo de importación</Text>
               </View>
-              {(terms.paymentMethod || '50% Anticipo a la firma del Contrato\n25% Al aviso de embarque\n20% Al aviso de entrega del equipo en obra\n05% Al aviso de entrega en funcionamiento')
+              {(terms.paymentMethod || '50% Anticipo a la firma del Contrato\n25% Al aviso de embarque\n25% Al aviso de entrega del equipo en obra')
                 .split('\n').filter(l => l.trim()).map((line, i) => (
                   <View key={i} style={[S.condRow, i % 2 === 1 ? { backgroundColor: LGRAY } : {}]}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingHorizontal: 7, paddingVertical: 4 }}>

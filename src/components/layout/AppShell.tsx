@@ -5,6 +5,7 @@ import {
   Shield, ChevronRight, Users, Menu, X,
 } from 'lucide-react';
 import type { View } from '../../App';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface Props {
   displayName:  string;
@@ -27,6 +28,7 @@ export default function AppShell({
   const [mobileOpen,  setMobileOpen]  = useState(false);
   // Desktop: sidebar expandido por hover
   const [desktopOpen, setDesktopOpen] = useState(false);
+  const { isDark } = useTheme();
 
   const safeName    = displayName || '';
   const initial     = safeName.charAt(0).toUpperCase();
@@ -169,7 +171,7 @@ export default function AppShell({
         <p
           className="text-[9px] font-mono whitespace-nowrap overflow-hidden transition-all duration-200"
           style={{ color: 'rgba(255,255,255,0.2)', opacity: expanded ? 1 : 0 }}>
-          2.1.2 | ALAMEX
+          2.2.1 | ALAMEX
         </p>
         {!expanded && (
           <div className="w-4 h-0.5 rounded-full mx-auto" style={{ background: 'rgba(255,255,255,0.1)' }} />
@@ -223,7 +225,7 @@ export default function AppShell({
   );
 
   return (
-    <div className="h-full flex flex-col" style={{ background: '#F9F7F2' }}>
+    <div className="h-full flex flex-col" style={{ background: isDark ? '#040D1A' : '#F9F7F2' }}>
 
       {/* ══ HEADER ══ */}
       <header
@@ -285,7 +287,7 @@ export default function AppShell({
             </button>
           )}
 
-          <div className="flex items-center gap-2 md:gap-3 pl-3 md:pl-5 border-l border-white/10">
+<div className="flex items-center gap-2 md:gap-3 pl-3 md:pl-5 border-l border-white/10">
             <button onClick={() => handleNav('profile')} className="text-right hidden md:block group">
               <p className="text-white font-bold text-sm leading-tight group-hover:text-[#D4AF37] transition-colors">
                 {safeName || 'Usuario'}
@@ -379,7 +381,7 @@ export default function AppShell({
         </aside>
 
         {/* ── CONTENIDO ── */}
-        <main className="flex-1 overflow-hidden flex flex-col relative" style={{ background: '#F9F7F2' }}>
+        <main className="flex-1 overflow-hidden flex flex-col relative" style={{ background: isDark ? '#040D1A' : '#F9F7F2' }}>
           <div className="absolute inset-0 arabesque-pattern pointer-events-none z-0 opacity-30" />
           <div className="ambient-light-bg opacity-40" />
           <div className="relative z-10 flex-1 flex flex-col overflow-hidden">

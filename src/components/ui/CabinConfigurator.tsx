@@ -342,31 +342,50 @@ export default function CabinConfigurator({
     }
 
     // Pasamanos
-    if (extras.includes('pasamanos-redondo') || extras.includes('pasamanos-cuadrado')) {
-      const isCuadrado = extras.includes('pasamanos-cuadrado');
+    const pasId = extras.find(e => e.startsWith('pasamanos-'));
+    if (pasId) {
+      const isH11 = pasId === 'pasamanos-lg-h11';
+      const isH13 = pasId === 'pasamanos-lg-h13';
+      const isH15 = pasId === 'pasamanos-lg-h15';
+      const isH17 = pasId === 'pasamanos-lg-h17';
       const py = FL.y + (FBL.y - FL.y) * 0.46;
       ctx.save();
       ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 4;
       const rg = ctx.createLinearGradient(0, py - 6, 0, py + 7);
-      rg.addColorStop(0,    '#eceef2');
-      rg.addColorStop(0.35, '#aab0bc');
-      rg.addColorStop(0.65, '#dadfe8');
-      rg.addColorStop(1,    '#888e9c');
+      if (isH13) {
+        rg.addColorStop(0, '#d4b896'); rg.addColorStop(0.35, '#9b7553');
+        rg.addColorStop(0.65, '#c8a882'); rg.addColorStop(1, '#7a5c40');
+      } else if (isH15) {
+        rg.addColorStop(0, '#f5f0e8'); rg.addColorStop(0.35, '#d0c8b8');
+        rg.addColorStop(0.65, '#ede8e0'); rg.addColorStop(1, '#b8b0a0');
+      } else {
+        rg.addColorStop(0, '#eceef2'); rg.addColorStop(0.35, '#aab0bc');
+        rg.addColorStop(0.65, '#dadfe8'); rg.addColorStop(1, '#888e9c');
+      }
       ctx.strokeStyle = rg;
-      ctx.lineWidth = isCuadrado ? 10 : 11;
-      ctx.lineCap = isCuadrado ? 'square' : 'round';
+      ctx.lineWidth = isH11 ? 8 : 11;
+      ctx.lineCap = isH11 ? 'square' : 'round';
       ctx.beginPath(); ctx.moveTo(FL.x + 12, py); ctx.lineTo(FR.x - 12, py); ctx.stroke();
+      // Segundo tubo para H17
+      if (isH17) {
+        ctx.shadowBlur = 4;
+        const rg2 = ctx.createLinearGradient(0, py + 8, 0, py + 17);
+        rg2.addColorStop(0, '#eceef2'); rg2.addColorStop(0.5, '#aab0bc'); rg2.addColorStop(1, '#888e9c');
+        ctx.strokeStyle = rg2; ctx.lineWidth = 7; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(FL.x + 12, py + 14); ctx.lineTo(FR.x - 12, py + 14); ctx.stroke();
+      }
       ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
       // Highlight superior
-      ctx.strokeStyle = 'rgba(255,255,255,0.58)'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(255,255,255,0.58)'; ctx.lineWidth = isH11 ? 1.5 : 2.5; ctx.lineCap = 'round';
       ctx.beginPath(); ctx.moveTo(FL.x + 14, py - 3); ctx.lineTo(FR.x - 14, py - 3); ctx.stroke();
       // Soportes
+      const supportColor = (isH13 || isH15) ? '#c8906e' : '#a2a8b6';
+      const pyEnd = isH17 ? py + 22 : py + 5.5;
       [0.18, 0.50, 0.82].forEach(t => {
         const sx = FL.x + (FR.x - FL.x) * t;
         ctx.shadowBlur = 3;
-        ctx.strokeStyle = '#a2a8b6';
-        ctx.lineWidth = 5; ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.moveTo(sx, py + 5.5); ctx.lineTo(sx, py + 26); ctx.stroke();
+        ctx.strokeStyle = supportColor; ctx.lineWidth = 5; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(sx, pyEnd); ctx.lineTo(sx, pyEnd + 20); ctx.stroke();
       });
       ctx.restore();
     }
@@ -508,9 +527,11 @@ export default function CabinConfigurator({
       ctx.fillText(desc, 14, H - fh + 30);
       // Extras
       const extraLabels: Record<string, string> = {
-        'espejo-trasero':     'Espejo Fondo',
-        'pasamanos-redondo':  'Pasam. Redondo',
-        'pasamanos-cuadrado': 'Pasam. Cuadrado',
+        'espejo-trasero':    'Espejo Fondo',
+        'pasamanos-lg-h11':  'LG-H11',
+        'pasamanos-lg-h13':  'LG-H13',
+        'pasamanos-lg-h15':  'LG-H15',
+        'pasamanos-lg-h17':  'LG-H17',
       };
       const panPos = ['izquierdo','derecho','fondo'].filter(p => extras.includes(`panoramico-${p}`));
       const panEl = panPos.length === 3 ? 'Panorámica completa' : panPos.length > 0 ? `Pan. ${panPos.join('/')}` : '';

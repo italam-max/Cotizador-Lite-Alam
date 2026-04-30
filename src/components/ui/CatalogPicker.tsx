@@ -141,8 +141,8 @@ export function CabinSheet({ cabinModel, finish, floor, plafon, selected, onSele
                 {/* Filas */}
                 {[
                   ['Coating',    finish?.label  || 'INOX',         'Revêtement', finish?.label  || 'INOX'],
-                  ['Ceiling',    plafon?.id     || 'LV-29',        'Plafond',    plafon?.id     || 'LV-29'],
-                  ['Floor',      floor?.label   || 'Natural Granite','Sol',       floor?.label   || 'Granito'],
+                  ['Ceiling',    plafon?.id     || 'LV-10',        'Plafond',    plafon?.id     || 'LV-10'],
+                  ['Floor',      floor?.label   || 'Star Galaxy',   'Sol',        floor?.label   || 'Star Galaxy'],
                   ['Accessories','Mirror Stainless',                'Accessoire', 'Inoxydable'],
                   ['Handrail',   'Chrome Stainless Nickel',         'Main courante','Chrome Inox Nickel'],
                   ['Side Wall',  'Stainless',                       'Paroi latérale','Inox'],

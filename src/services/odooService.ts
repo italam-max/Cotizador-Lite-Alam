@@ -121,9 +121,11 @@ export async function sendQuoteToOdoo(
   const isMR = quote.model === 'MR';
   const extrasArr: string[] = (() => { try { return JSON.parse(quote.cabin_model || '[]'); } catch { return []; } })();
   const EXTRA_LABELS: Record<string, string> = {
-    'espejo-trasero':     'Espejo fondo',
-    'pasamanos-redondo':  'Pasamanos redondo',
-    'pasamanos-cuadrado': 'Pasamanos cuadrado',
+    'espejo-trasero':    'Espejo fondo',
+    'pasamanos-lg-h11': 'LG-H11 Acrílico',
+    'pasamanos-lg-h13': 'LG-H13 Olmo Oro Rosa',
+    'pasamanos-lg-h15': 'LG-H15 Jade Oro Rosa',
+    'pasamanos-lg-h17': 'LG-H17 Doble Tubo',
   };
   const panPos = ['izquierdo','derecho','fondo'].filter(p => extrasArr.includes(`panoramico-${p}`));
   const panLabel = panPos.length === 3 ? 'Cabina panorámica completa'
